@@ -41,8 +41,6 @@ class RailroadStationApp(QMainWindow):
         exitAction.setStatusTip('Выйти из приложения')
         exitAction.triggered.connect(self.close)
 
-
-
         FullscreenAction = QAction('Полноэкранный режим', self)
         FullscreenAction.setStatusTip('Полноэкранноый режим')
         FullscreenAction.triggered.connect(self.showFullScreen)
@@ -113,6 +111,7 @@ class RailroadStationApp(QMainWindow):
                     self.horizontal_lines = self.createHorizontalLines()  # Создаем и сохраняем горизонтальные линии
 
 
+
         except Exception as e:
             print(f"An error occurred while loading state: {e}")
 
@@ -177,7 +176,9 @@ class RailroadStationApp(QMainWindow):
         for widget in self.horizontal_lines:
             widget.setParent(None)
         self.horizontal_lines.clear()
-        
+        if self.horizontal_lines is None:
+            self.horizontal_lines = []
+
         self.count_gorisontal_line = self.num_lines
         layout = self.scroll_area.widget().layout()
         for _ in range(self.num_lines):
@@ -189,6 +190,7 @@ class RailroadStationApp(QMainWindow):
             spacer = QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum)
             layout.addItem(spacer)
         self.scroll_area.widget().setLayout(layout)
+        return self.horizontal_lines
 
     def get_widget(self, image_path, event_time_minutes):
         self.current_image_path = image_path
@@ -198,8 +200,8 @@ class RailroadStationApp(QMainWindow):
         self.buttons.append(button)
 
     def add_horizontal_line(self):
-        if self.horizontal_lines is None:
-            self.horizontal_lines = []  # Initialize it if it's None
+        #if self.horizontal_lines is None:
+        #    self.horizontal_lines = []  # Initialize it if it's None
         user_input, ok = QInputDialog.getInt(self, 'Введите количество полос', 'Количество:')
         if ok:
             self.count_gorisontal_line = user_input
@@ -226,9 +228,6 @@ class RailroadStationApp(QMainWindow):
                 self.scroll_area.widget().update()
             else:
                 QMessageBox.warning(self, "Предупреждение", "Несуществующая строка!", QMessageBox.Ok)
-
-
-
 
 
 class DraggableButton(QPushButton):
