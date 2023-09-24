@@ -2,8 +2,11 @@ import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QToolBar, QAction, QPushButton, QWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QSpacerItem, QSizePolicy, QInputDialog
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QIcon
+
+
 import EventManager
 
+# Указываем время начала и конца отчета, а также интервал
 start_time = 8
 end_time = 22
 interval = 10
@@ -31,7 +34,7 @@ class RailroadStationApp(QMainWindow):
 
         exitFullscreenAction = QAction('Выйти из полноэкранного режима', self)
         exitFullscreenAction.setStatusTip('Выйти из полноэкранного режима')
-        exitFullscreenAction.triggered.connect(self.exit_fullscreen)
+        exitFullscreenAction.triggered.connect(self.showNormal)
 
         viewMenu = menubar.addMenu('Вид')
         viewMenu.addAction(exitFullscreenAction)
@@ -57,70 +60,64 @@ class RailroadStationApp(QMainWindow):
 
             action_button.triggered.connect(lambda _, path=image_path, time=simples[simple]["Time"]: self.get_widget(path, time))
 
-        scroll_widget = QWidget(self)
+        # Создаем виджет с прокруткой
         self.scroll_area = QScrollArea(self)
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll_area.setWidgetResizable(True)  # Разрешаем прокрутку содержимого
+        self.setCentralWidget(self.scroll_area)
 
-        self.setCentralWidget(scroll_widget)
-        scroll_layout = QVBoxLayout(scroll_widget)
-        scroll_layout.addWidget(self.scroll_area)
+        # Создаем виджет для содержимого (горизонтальные полосы и временная шкала)
+        self.scroll_content = QWidget(self.scroll_area)
+        self.scroll_content.setFixedWidth(maxPixelsScroll)
+        self.scroll_area.setWidget(self.scroll_content)
 
+        # Устанавливаем вертикальное распределение полос и временной шкалы
         layout = QVBoxLayout()
 
-        top_widget = QWidget(self)
-        top_layout = QVBoxLayout(top_widget)
-
+        # Создаем временную шкалу с интервалом
         time_scale_layout = QHBoxLayout()
-
         for hour in range(start_time, end_time + 1):
             for minute in range(0, 60, interval):
                 time_label = QLabel(f"{hour:02d}:{minute:02d}")
-                time_label.setFixedSize(50, 50)
+                time_label.setFixedSize(50, 50)  # Уменьшаем размер метки времени
                 time_scale_layout.addWidget(time_label)
 
+                # Добавляем вертикальную линию между интервалами (кроме последнего интервала)
                 if minute < 60 - interval:
-                    line = QFrame(self)
+                    line = QFrame(self.scroll_content)
                     line.setFrameShape(QFrame.VLine)
                     line.setFrameShadow(QFrame.Sunken)
-                    line.setLineWidth(1)
+                    line.setLineWidth(1)  # Уменьшаем жирность линии
                     time_scale_layout.addWidget(line)
 
+            # Добавляем вертикальную линию между часами (кроме последнего часа)
             if hour < end_time:
-                line = QFrame(self)
+                line = QFrame(self.scroll_content)
                 line.setFrameShape(QFrame.VLine)
                 line.setFrameShadow(QFrame.Sunken)
                 time_scale_layout.addWidget(line)
 
-        top_layout.addLayout(time_scale_layout)
-        top_layout.addStretch()
-        top_widget.setLayout(top_layout)
-        layout.addWidget(top_widget)
+        layout.addLayout(time_scale_layout)
 
+        # Создаем горизонтальные полосы
         self.horizontal_lines = []
-        self.count_gorisontal_line = 2
-        for _ in range(self.count_gorisontal_line):
-            line = QPushButton()
-            line.setFixedSize(maxPixelsScroll, 50)
+        for _ in range(6):
+            line = QPushButton("")
+            line.setFixedSize(maxPixelsScroll, 50)  # Устанавливаем размер кнопки
             self.horizontal_lines.append(line)
             layout.addWidget(line)
 
-        scroll_content = QWidget(self.scroll_area)
-        scroll_content.setFixedWidth(maxPixelsScroll)
-        self.scroll_area.setWidget(scroll_content)
-        scroll_content.setLayout(layout)
+        self.scroll_content.setLayout(layout)
 
+        # Список для хранения созданных кнопок
         self.buttons = []
 
     def get_widget(self, image_path, event_time_minutes):
-        button = DraggableButton(image_path, self.scroll_area, self.horizontal_lines, event_time_minutes)
+        button = DraggableButton(image_path, self.scroll_content, self.horizontal_lines, event_time_minutes)
+        # Установите координаты размещения кнопки внутри self.scroll_content
         button.setGeometry(0, 0, 150, 50)
         button.show()
+        # Сохраняем ссылку на созданную кнопку
         self.buttons.append(button)
-
-    def exit_fullscreen(self):
-        self.showNormal()
 
     def add_horizontal_line(self):
         user_input, ok = QInputDialog.getInt(self, 'Введите количество полос', 'Количество:')
@@ -153,7 +150,6 @@ class RailroadStationApp(QMainWindow):
 
                 self.scroll_area.widget().update()
 
-
 class DraggableButton(QPushButton):
     def __init__(self, image_path, parent=None, horizontal_lines=None, event_time_minutes=0):
         super().__init__(parent)
@@ -163,30 +159,33 @@ class DraggableButton(QPushButton):
 
         self.dragging = False
         self.offset = None
-        self.horizontal_lines = horizontal_lines
-        self.setWindowFlags(Qt.WindowStaysOnTopHint)
+        self.horizontal_lines = horizontal_lines  # Передаем список горизонтальных полос
+        self.setWindowFlags(Qt.WindowStaysOnTopHint)  # Устанавливаем флаг, чтобы оставаться на переднем плане
         self.event_time_minutes = event_time_minutes
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.dragging = True
+            print("Тут новое окошко для настроен")
             self.offset = event.pos()
 
     def mouseMoveEvent(self, event):
         if self.dragging:
             new_pos = self.mapToParent(event.pos() - self.offset)
+            # Вычисляем ширину кнопки на основе времени в минутах и максимальной длины скролл-бара
             button_width = int(self.event_time_minutes / (end_time * 60 - start_time * 60) * maxPixelsScroll)
             self.setFixedSize(button_width, 50)
+            # Центрирование кнопки только по вертикали относительно горизонтальных полос
             for line in self.horizontal_lines:
                 if line.geometry().contains(new_pos):
                     new_pos.setY(int(line.geometry().center().y() - self.height() / 2))
                     break
             self.move(new_pos)
 
+
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.dragging = False
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
