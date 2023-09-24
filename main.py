@@ -1,7 +1,10 @@
+import os
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QToolBar, QAction, QPushButton, QWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QSpacerItem, QSizePolicy, QInputDialog
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import QMessageBox
+import json
 
 import EventManager
 
@@ -18,6 +21,12 @@ class RailroadStationApp(QMainWindow):
         self.setGeometry(100, 100, 800, 600)
         self.showFullScreen()
 
+        self.state = {'horizontal_lines': [], 'widgets': []}
+        self.current_image_path = None
+
+        self.num_lines = 0
+        self.horizontal_lines = []
+
         self.initUI()
 
     def initUI(self):
@@ -32,6 +41,8 @@ class RailroadStationApp(QMainWindow):
         exitAction.setStatusTip('Выйти из приложения')
         exitAction.triggered.connect(self.close)
 
+
+
         FullscreenAction = QAction('Полноэкранный режим', self)
         FullscreenAction.setStatusTip('Полноэкранноый режим')
         FullscreenAction.triggered.connect(self.showFullScreen)
@@ -43,6 +54,18 @@ class RailroadStationApp(QMainWindow):
         # Создаем меню "Файл" и добавляем в него действия
         fileMenu = self.menuBar().addMenu('Файл')
         fileMenu.addAction(exitAction)
+
+        saveAction = QAction('Сохранить', self)
+        saveAction.setShortcut('Ctrl+S')
+        saveAction.setStatusTip('Сохранить состояние')
+        saveAction.triggered.connect(self.save_state)
+        fileMenu.addAction(saveAction)
+
+        loadAction = QAction('Загрузить', self)
+        loadAction.setShortcut('Ctrl+L')
+        loadAction.setStatusTip('Загрузить состояние')
+        loadAction.triggered.connect(self.load_state)
+        fileMenu.addAction(loadAction)
 
         # Создаем меню "Вид" и добавляем в него действия
         viewMenu = self.menuBar().addMenu('Вид')
@@ -58,6 +81,40 @@ class RailroadStationApp(QMainWindow):
         removeHorizontalLineAction = QAction('Удалить горизонтальную полосу', self)
         removeHorizontalLineAction.triggered.connect(self.remove_horizontal_line)
         canvasMenu.addAction(removeHorizontalLineAction)
+
+    def save_state(self):
+        widget_coords = [(widget.geometry().x(), widget.geometry().y()) for widget in self.buttons]
+        self.state['widgets'] = [{'path': self.current_image_path, 'coords': coords} for coords in widget_coords]
+        self.state['num_lines'] = self.num_lines  # Добавляем количество полос
+
+        try:
+            # Пытаемся удалить существующий файл
+            os.remove('state.json')
+        except FileNotFoundError:
+            pass  # Если файл не найден, ничего не делаем
+
+        with open('state.json', 'w') as file:
+            json.dump(self.state, file)
+
+    def load_state(self):
+        try:
+            with open('state.json', 'r') as file:
+                self.state = json.load(file)
+
+                for widget_data in self.state['widgets']:
+                    image_path = widget_data['path']
+                    coords = widget_data['coords']
+                    button = DraggableButton(image_path, self.scroll_content, self.horizontal_lines)
+                    button.setGeometry(coords[0], coords[1], 150, 50)  # Устанавливаем координаты и размеры кнопки
+                    self.buttons.append(button)
+
+                if 'num_lines' in self.state:
+                    self.num_lines = self.state['num_lines']  # Восстанавливаем количество полос
+                    self.horizontal_lines = self.createHorizontalLines()  # Создаем и сохраняем горизонтальные линии
+
+
+        except Exception as e:
+            print(f"An error occurred while loading state: {e}")
 
     def createToolBar(self):
         self.tool_bar = QToolBar()
@@ -117,20 +174,32 @@ class RailroadStationApp(QMainWindow):
         return time_scale_layout
 
     def createHorizontalLines(self):
-        horizontal_lines = []
-        for _ in range(6):
-            line = QPushButton("")
+        for widget in self.horizontal_lines:
+            widget.setParent(None)
+        self.horizontal_lines.clear()
+        
+        self.count_gorisontal_line = self.num_lines
+        layout = self.scroll_area.widget().layout()
+        for _ in range(self.num_lines):
+            line = QPushButton()
             line.setFixedSize(maxPixelsScroll, 50)
-            horizontal_lines.append(line)
-        return horizontal_lines
+            self.horizontal_lines.append(line)
+            pass
+            layout.addWidget(line)
+            spacer = QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum)
+            layout.addItem(spacer)
+        self.scroll_area.widget().setLayout(layout)
 
     def get_widget(self, image_path, event_time_minutes):
+        self.current_image_path = image_path
         button = DraggableButton(image_path, self.scroll_content, self.horizontal_lines, event_time_minutes)
         button.setGeometry(0, 0, 150, 50)
         button.show()
         self.buttons.append(button)
 
     def add_horizontal_line(self):
+        if self.horizontal_lines is None:
+            self.horizontal_lines = []  # Initialize it if it's None
         user_input, ok = QInputDialog.getInt(self, 'Введите количество полос', 'Количество:')
         if ok:
             self.count_gorisontal_line = user_input
@@ -143,6 +212,7 @@ class RailroadStationApp(QMainWindow):
                 spacer = QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum)
                 layout.addItem(spacer)
             self.scroll_area.widget().setLayout(layout)
+            self.num_lines += user_input  # Обновляем количество полос
 
     def remove_horizontal_line(self):
         index, ok = QInputDialog.getInt(self, 'Введите индекс полосы:', 'Индекс:')
@@ -154,6 +224,12 @@ class RailroadStationApp(QMainWindow):
                 for i, line in enumerate(self.horizontal_lines):
                     line.setText(f"Schedule Line {i + 1}")
                 self.scroll_area.widget().update()
+            else:
+                QMessageBox.warning(self, "Предупреждение", "Несуществующая строка!", QMessageBox.Ok)
+
+
+
+
 
 class DraggableButton(QPushButton):
     def __init__(self, image_path, parent=None, horizontal_lines=None, event_time_minutes=0):
@@ -186,6 +262,7 @@ class DraggableButton(QPushButton):
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.dragging = False
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
