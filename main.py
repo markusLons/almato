@@ -72,9 +72,13 @@ class RailroadStationApp(QMainWindow):
 
         # Создаем меню "Полотно" и добавляем в него действия
         canvasMenu = self.menuBar().addMenu('Полотно')
-        addHorizontalLineAction = QAction('Добавить горизонтальную полосу', self)
+        addHorizontalLineAction = QAction('Добавить горизонтальные полосы', self)
         addHorizontalLineAction.triggered.connect(self.add_horizontal_line)
         canvasMenu.addAction(addHorizontalLineAction)
+
+        addHorizontalLineAction1 = QAction('Добавить горизонтальную полосу', self)
+        addHorizontalLineAction1.triggered.connect(self.add_horizontal_line1)
+        canvasMenu.addAction(addHorizontalLineAction1)
 
         removeHorizontalLineAction = QAction('Удалить горизонтальную полосу', self)
         removeHorizontalLineAction.triggered.connect(self.remove_horizontal_line)
@@ -215,6 +219,18 @@ class RailroadStationApp(QMainWindow):
                 layout.addItem(spacer)
             self.scroll_area.widget().setLayout(layout)
             self.num_lines += user_input  # Обновляем количество полос
+
+    def add_horizontal_line1(self):
+        self.count_gorisontal_line = 1
+        layout = self.scroll_area.widget().layout()
+        line = QPushButton()
+        line.setFixedSize(maxPixelsScroll, 50)
+        self.horizontal_lines.append(line)
+        layout.addWidget(line)
+        spacer = QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        layout.addItem(spacer)
+        self.scroll_area.widget().setLayout(layout)
+        self.num_lines += 1
 
     def remove_horizontal_line(self):
         index, ok = QInputDialog.getInt(self, 'Введите индекс полосы:', 'Индекс:')
