@@ -7,8 +7,10 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QMessageBox
 import json
 from datetime import datetime, timedelta
+import mysql.connector
 
-user_id
+user_id = "1"
+map_id = "1"
 import EventManager
 
 # Указываем время начала и конца отчета, а также интервал
@@ -38,6 +40,8 @@ def get_end_coordinate(button):
         end_time_button = (current_x - start_dict + button_width) // pixels_on_min
     except Exception:
         return ("00", "00")
+
+
 
     return (start_time_button, end_time_button)
 
@@ -135,7 +139,6 @@ class RailroadStationApp(QMainWindow):
 
         addHorizontalLineAction1 = QAction('Добавить горизонтальную полосу', self)
         addHorizontalLineAction1.triggered.connect(self.add_horizontal_line1)
-        addHorizontalLineAction1.setShortcut('Ctrl+G')
         adddownMenu.addAction(addHorizontalLineAction1)
 
         addHorizontalLineAction = QAction('Добавить горизонтальные полосы', self)
@@ -160,7 +163,7 @@ class RailroadStationApp(QMainWindow):
 
         canvasMenu.addMenu(dropdownMenu)
 
-    def save_state(self):
+    def get_map_data(self):
         state = {}  # Создаем пустой словарь для сохранения состояния
 
         # Создаем список для хранения информации о кнопках
@@ -193,6 +196,48 @@ class RailroadStationApp(QMainWindow):
                 print("Состояние успешно сохранено в файл 'state.json'")
         except Exception as e:
             print(f"Ошибка при сохранении состояния: {e}")
+        return json_state
+
+    def save_state(self):
+
+        # Создаем подключение к базе данных из файла конфигурации
+        with open('db_config.json', 'r') as config_file:
+            config = json.load(config_file)
+
+        connection = None  # Инициализируем переменные connection и cursor
+        cursor = None
+
+        try:
+            connection = mysql.connector.connect(**config, connect_timeout=60)
+            cursor = connection.cursor()
+
+            if map_id == -1:
+                # Создаем новую карту
+                map_data = self.get_map_data()  # Преобразуем состояние в JSON-строку
+                data_create = datetime.now()
+                data_edit = data_create
+                name = "Новая карта"  # Имя новой карты
+                cursor.execute("INSERT INTO maps (user_id, map_data, comment, name, data_create, data_edit) "
+                               "VALUES (%s, %s, %s, %s, %s, %s)",
+                               (user_id, map_data, "", name, data_create, data_edit))
+            else:
+                # Обновляем существующую карту
+                map_data = self.get_map_data()  # Преобразуем состояние в JSON-строку
+                data_edit = datetime.now()
+                cursor.execute("UPDATE maps SET map_data = %s, data_edit = %s WHERE map_id = %s",
+                               (map_data, data_edit, map_id))
+
+            # Сохраняем изменения
+            connection.commit()
+            print("Карта успешно сохранена или обновлена в базе данных.")
+
+        except mysql.connector.Error as err:
+            print(f"Ошибка при работе с базой данных: {err}")
+        finally:
+            if cursor:
+                cursor.close()
+            if connection and connection.is_connected():
+                connection.close()
 
     def load_state_from_data(self, state_data):
         try:
