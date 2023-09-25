@@ -1,6 +1,7 @@
 import os
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QToolBar, QAction, QPushButton, QWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QSpacerItem, QSizePolicy, QInputDialog
+from PyQt5.QtWidgets import QApplication, QMainWindow, QToolBar, QAction, QPushButton, QWidget, QScrollArea, \
+    QVBoxLayout, QHBoxLayout, QLabel, QFrame, QSpacerItem, QSizePolicy, QInputDialog, QMenu
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QMessageBox
@@ -73,25 +74,33 @@ class RailroadStationApp(QMainWindow):
         # Создаем меню "Полотно" и добавляем в него действия
         canvasMenu = self.menuBar().addMenu('Полотно')
 
+        adddownMenu = QMenu('Добавление', self)
+
         addHorizontalLineAction1 = QAction('Добавить горизонтальную полосу', self)
         addHorizontalLineAction1.triggered.connect(self.add_horizontal_line1)
-        canvasMenu.addAction(addHorizontalLineAction1)
+        adddownMenu.addAction(addHorizontalLineAction1)
 
         addHorizontalLineAction = QAction('Добавить горизонтальные полосы', self)
         addHorizontalLineAction.triggered.connect(self.add_horizontal_line)
-        canvasMenu.addAction(addHorizontalLineAction)
+        adddownMenu.addAction(addHorizontalLineAction)
+
+        canvasMenu.addMenu(adddownMenu)
+
+        dropdownMenu = QMenu('Удаление', self)
 
         removeHorizontalLineAction = QAction('Удалить горизонтальную полосу по индексу', self)
         removeHorizontalLineAction.triggered.connect(self.remove_horizontal_line_ind)
-        canvasMenu.addAction(removeHorizontalLineAction)
+        dropdownMenu.addAction(removeHorizontalLineAction)
 
         removeHorizontalLineAction_1 = QAction('Удалить первую горизонтальную полосу', self)
         removeHorizontalLineAction_1.triggered.connect(self.remove_horisontal_line_first)
-        canvasMenu.addAction(removeHorizontalLineAction_1)
+        dropdownMenu.addAction(removeHorizontalLineAction_1)
 
         removeHorizontalLineAction_2 = QAction('Удалить последнюю горизонтальную полосу', self)
         removeHorizontalLineAction_2.triggered.connect(self.remove_horisontal_line_last)
-        canvasMenu.addAction(removeHorizontalLineAction_2)
+        dropdownMenu.addAction(removeHorizontalLineAction_2)
+
+        canvasMenu.addMenu(dropdownMenu)
 
     def save_state(self):
         widget_coords = [(widget.geometry().x(), widget.geometry().y()) for widget in self.buttons]
