@@ -72,17 +72,26 @@ class RailroadStationApp(QMainWindow):
 
         # Создаем меню "Полотно" и добавляем в него действия
         canvasMenu = self.menuBar().addMenu('Полотно')
-        addHorizontalLineAction = QAction('Добавить горизонтальные полосы', self)
-        addHorizontalLineAction.triggered.connect(self.add_horizontal_line)
-        canvasMenu.addAction(addHorizontalLineAction)
 
         addHorizontalLineAction1 = QAction('Добавить горизонтальную полосу', self)
         addHorizontalLineAction1.triggered.connect(self.add_horizontal_line1)
         canvasMenu.addAction(addHorizontalLineAction1)
 
-        removeHorizontalLineAction = QAction('Удалить горизонтальную полосу', self)
-        removeHorizontalLineAction.triggered.connect(self.remove_horizontal_line)
+        addHorizontalLineAction = QAction('Добавить горизонтальные полосы', self)
+        addHorizontalLineAction.triggered.connect(self.add_horizontal_line)
+        canvasMenu.addAction(addHorizontalLineAction)
+
+        removeHorizontalLineAction = QAction('Удалить горизонтальную полосу по индексу', self)
+        removeHorizontalLineAction.triggered.connect(self.remove_horizontal_line_ind)
         canvasMenu.addAction(removeHorizontalLineAction)
+
+        removeHorizontalLineAction_1 = QAction('Удалить первую горизонтальную полосу', self)
+        removeHorizontalLineAction_1.triggered.connect(self.remove_horisontal_line_first)
+        canvasMenu.addAction(removeHorizontalLineAction_1)
+
+        removeHorizontalLineAction_2 = QAction('Удалить последнюю горизонтальную полосу', self)
+        removeHorizontalLineAction_2.triggered.connect(self.remove_horisontal_line_last)
+        canvasMenu.addAction(removeHorizontalLineAction_2)
 
     def save_state(self):
         widget_coords = [(widget.geometry().x(), widget.geometry().y()) for widget in self.buttons]
@@ -232,18 +241,37 @@ class RailroadStationApp(QMainWindow):
         self.scroll_area.widget().setLayout(layout)
         self.num_lines += 1
 
-    def remove_horizontal_line(self):
+    def remove_horizontal_line_ind(self):
         index, ok = QInputDialog.getInt(self, 'Введите индекс полосы:', 'Индекс:')
         if ok:
             if 0 <= index < len(self.horizontal_lines):
                 line = self.horizontal_lines.pop(index)
                 line.setParent(None)
                 del line
-                for i, line in enumerate(self.horizontal_lines):
-                    line.setText(f"Schedule Line {i + 1}")
+                self.num_lines -= 1
                 self.scroll_area.widget().update()
             else:
                 QMessageBox.warning(self, "Предупреждение", "Несуществующая строка!", QMessageBox.Ok)
+
+    def remove_horisontal_line_first(self):
+        if len(self.horizontal_lines)>0:
+            line = self.horizontal_lines.pop(0)
+            line.setParent(None)
+            del line
+            self.scroll_area.widget().update()
+            self.num_lines -=1
+        else:
+            QMessageBox.warning(self, "Предупреждение", "Несуществующая строка!", QMessageBox.Ok)
+
+    def remove_horisontal_line_last(self):
+        if len(self.horizontal_lines)>0:
+            line = self.horizontal_lines.pop(len(self.horizontal_lines)-1)
+            line.setParent(None)
+            del line
+            self.scroll_area.widget().update()
+            self.num_lines -= 1
+        else:
+            QMessageBox.warning(self, "Предупреждение", "Несуществующая строка!", QMessageBox.Ok)
 
 
 class DraggableButton(QPushButton):
