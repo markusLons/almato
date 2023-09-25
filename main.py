@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QMessageBox
 import json
 from datetime import datetime, timedelta
 
-
+user_id
 import EventManager
 
 # Указываем время начала и конца отчета, а также интервал
@@ -59,6 +59,36 @@ class RailroadStationApp(QMainWindow):
 
         self.initUI()
 
+    def clear_current_state(self):
+        """
+        Очищает текущее состояние приложения, удаляя все кнопки и линии.
+        """
+        # Очищаем текущее состояние
+        for button in self.buttons:
+            button.setParent(None)
+            button.deleteLater()
+        self.buttons = []
+        for line in self.horizontal_lines:
+            line.setParent(None)
+            line.deleteLater()
+        self.horizontal_lines = []
+        self.num_lines = 0
+        self.current_image_path = None
+
+    def set_button_position(self, button, start_time_minutes, line_index):
+        """
+        Устанавливает позицию кнопки на основе времени и индекса линии.
+
+        :param button: Кнопка, для которой устанавливается позиция.
+        :param start_time_minutes: Время начала события в минутах с начала дня.
+        :param line_index: Индекс линии, на которой должна располагаться кнопка.
+        """
+        # Установка позиции кнопки на основе времени и индекса линии
+        pixel = int(start_time_minutes / ((end_time - start_time) * 60) * maxPixelsScroll)
+        line_height = 50 * line_index
+        button_width = int((end_time - start_time) * 60 / maxPixelsScroll * button.width())
+        button.setGeometry(pixel, line_height, button_width, 50)
+        button.line_index = line_index  # Устанавливаем индекс линии
     def initUI(self):
         self.createMenus()
         self.createToolBar()
@@ -92,7 +122,7 @@ class RailroadStationApp(QMainWindow):
         loadAction = QAction('Загрузить', self)
         loadAction.setShortcut('Ctrl+L')
         loadAction.setStatusTip('Загрузить состояние')
-        loadAction.triggered.connect(self.load_state)
+        loadAction.triggered.connect(self.load_state_from_data)
         fileMenu.addAction(loadAction)
 
         # Создаем меню "Вид" и добавляем в него действия
@@ -165,26 +195,31 @@ class RailroadStationApp(QMainWindow):
         except Exception as e:
             print(f"Ошибка при сохранении состояния: {e}")
 
-    def load_state(self):
+    def load_state_from_data(self, state_data):
         try:
-            with open('state.json', 'r') as file:
-                self.state = json.load(file)
+            # Очищаем текущее состояние
+            self.clear_current_state()
 
-                for widget_data in self.state['widgets']:
-                    image_path = widget_data['path']
-                    coords = widget_data['coords']
-                    button = DraggableButton(image_path, self.scroll_content, self.horizontal_lines)
-                    button.setGeometry(coords[0], coords[1], 150, 50)  # Устанавливаем координаты и размеры кнопки
-                    self.buttons.append(button)
+            # Восстанавливаем состояние из данных
+            self.num_lines = state_data.get('num_lines', 0)
+            self.horizontal_lines = self.createHorizontalLines()
 
-                if 'num_lines' in self.state:
-                    self.num_lines = self.state['num_lines']  # Восстанавливаем количество полос
-                    self.horizontal_lines = self.createHorizontalLines()  # Создаем и сохраняем горизонтальные линии
+            buttons_info = state_data.get('buttons', [])
+            for button_info in buttons_info:
+                image_path = button_info.get('image_path')
+                event_time_minutes = button_info.get('end_time') - button_info.get('start_time')
+                button = DraggableButton(image_path, self.scroll_content, self.horizontal_lines, event_time_minutes)
+                button.setGeometry(0, 0, 150, 50)
+                button.show()
+                self.buttons.append(button)
+                self.set_button_position(button, button_info.get('start_time'), button_info.get('line_index'))
 
+            self.current_image_path = state_data.get('current_image_path', None)
 
+            QMessageBox.information(self, "Загрузка состояния", "Состояние успешно загружено.")
 
         except Exception as e:
-            print(f"An error occurred while loading state: {e}")
+            QMessageBox.warning(self, "Ошибка загрузки", f"Произошла ошибка при загрузке состояния: {str(e)}")
 
     def createToolBar(self):
         self.tool_bar = QToolBar()
@@ -383,5 +418,30 @@ class DraggableButton(QPushButton):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = RailroadStationApp()
+    state_data = json.loads("""{
+    "buttons": [
+        {
+            "index": 0,
+            "name": "",
+            "start_time": 5.0,
+            "end_time": 19.0,
+            "line_index": 0,
+            "image_path": "Отправление.png"
+        }
+    ],
+    "num_lines": 12
+}""")
+    window.load_state_from_data(state_data)
+    # if len(sys.argv) == 2:
+    #     # Если аргументов командной строки 2, то предполагаем, что первый аргумент - это JSON-строка.
+    #     json_string = sys.argv[1]
+    #
+    #     # Попробуйте загрузить JSON-строку и обновить состояние приложения
+    #     try:
+    #         state_data = json.loads(json_string)
+    #         window.load_state_from_data(state_data)
+    #     except json.JSONDecodeError as e:
+    #         QMessageBox.warning(window, "Ошибка загрузки", f"Ошибка при разборе JSON: {str(e)}")
+
     window.show()
     sys.exit(app.exec_())

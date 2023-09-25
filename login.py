@@ -53,7 +53,7 @@ class LoginWindow(QWidget):
 
             if user and user[2] == password:
                 # Запуск файла EditMap.py
-                subprocess.Popen(["python", "main.py"])
+                subprocess.run(["python", "getMapsState.py", str(user[0])])
                 self.close()  # Закрытие окна входа после успешного входа
             else:
                 QMessageBox.critical(self, 'Ошибка', 'Неверное имя пользователя или пароль.')
