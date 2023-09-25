@@ -91,8 +91,8 @@ class RailroadStationApp(QMainWindow):
         except FileNotFoundError:
             pass  # Если файл не найден, ничего не делаем
 
-        with open('state.json', 'w') as file:
-            json.dump(self.state, file)
+        with open('state.json', 'w', encoding='utf8') as file:
+            json.dump(self.state, file,  ensure_ascii=False,)
 
     def load_state(self):
         try:
