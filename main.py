@@ -39,8 +39,6 @@ def get_end_coordinate(button):
     except Exception:
         return ("00", "00")
 
-
-
     return (start_time_button, end_time_button)
 
 
@@ -107,6 +105,7 @@ class RailroadStationApp(QMainWindow):
 
         addHorizontalLineAction1 = QAction('Добавить горизонтальную полосу', self)
         addHorizontalLineAction1.triggered.connect(self.add_horizontal_line1)
+        addHorizontalLineAction1.setShortcut('Ctrl+G')
         adddownMenu.addAction(addHorizontalLineAction1)
 
         addHorizontalLineAction = QAction('Добавить горизонтальные полосы', self)
