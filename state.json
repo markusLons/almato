@@ -1,1 +1,13 @@
-{"horizontal_lines": [], "widgets": [], "num_lines": 0}
+{
+    "buttons": [
+        {
+            "index": 0,
+            "name": "",
+            "start_time": 5.0,
+            "end_time": 19.0,
+            "line_index": 0,
+            "image_path": "Отправление.png"
+        }
+    ],
+    "num_lines": 12
+}

@@ -6,6 +6,8 @@ from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QMessageBox
 import json
+from datetime import datetime, timedelta
+
 
 import EventManager
 
@@ -14,6 +16,33 @@ start_time = 8
 end_time = 22
 interval = 10
 maxPixelsScroll = 10000
+pixel_time_mapping = {}
+
+def get_end_coordinate(button):
+    current_x = button.geometry().x()
+    button_width = button.width()
+    end_x = current_x + button_width
+    start_dict = -1
+    ens_dict = -1
+    before_i = -1
+    for i in pixel_time_mapping.keys():
+        if i >= start_dict and start_dict == -1:
+            start_dict = before_i
+        if i > end_x:
+            ens_dict = i
+            break
+        before_i = i
+    try:
+        pixels_on_min = (ens_dict - start_dict) / ((pixel_time_mapping[ens_dict] - pixel_time_mapping[start_dict]).total_seconds() // 60)
+        start_time_button = (current_x - start_dict)//pixels_on_min
+        end_time_button = (current_x - start_dict + button_width) // pixels_on_min
+    except Exception:
+        return ("00", "00")
+
+
+
+    return (start_time_button, end_time_button)
+
 
 class RailroadStationApp(QMainWindow):
     def __init__(self):
@@ -103,18 +132,38 @@ class RailroadStationApp(QMainWindow):
         canvasMenu.addMenu(dropdownMenu)
 
     def save_state(self):
-        widget_coords = [(widget.geometry().x(), widget.geometry().y()) for widget in self.buttons]
-        self.state['widgets'] = [{'path': self.current_image_path, 'coords': coords} for coords in widget_coords]
-        self.state['num_lines'] = self.num_lines  # Добавляем количество полос
+        state = {}  # Создаем пустой словарь для сохранения состояния
 
+        # Создаем список для хранения информации о кнопках
+        buttons_info = []
+
+        for i, button in enumerate(self.buttons):
+            start_time, end_time = get_end_coordinate(button)
+            button_info = {
+                'index': i,  # Порядковый номер кнопки
+                'name': button.text(),  # Название кнопки (предполагается, что текст кнопки содержит имя)
+                'start_time': start_time,  # Время начала
+                'end_time': end_time,  # Время окончания
+                'line_index': button.line_index,  # Номер строки, на которой находится кнопка
+                'image_path': self.current_image_path,  # Путь к изображению
+            }
+            buttons_info.append(button_info)
+
+        state['buttons'] = buttons_info  # Добавляем информацию о кнопках в состояние
+        state['num_lines'] = self.num_lines  # Добавляем количество полос
+
+        json_state = json.dumps(state, indent=4, ensure_ascii=False)
+
+        # Теперь вы можете использовать json_state как строку или сохранить ее в переменной
+        print("Состояние успешно сохранено:")
+        print(json_state)
+        # Теперь можно сохранить состояние в файл JSON
         try:
-            # Пытаемся удалить существующий файл
-            os.remove('state.json')
-        except FileNotFoundError:
-            pass  # Если файл не найден, ничего не делаем
-
-        with open('state.json', 'w', encoding='utf8') as file:
-            json.dump(self.state, file,  ensure_ascii=False,)
+            with open('state.json', 'w') as file:
+                json.dump(state, file, indent=4, ensure_ascii=False)
+                print("Состояние успешно сохранено в файл 'state.json'")
+        except Exception as e:
+            print(f"Ошибка при сохранении состояния: {e}")
 
     def load_state(self):
         try:
@@ -176,11 +225,19 @@ class RailroadStationApp(QMainWindow):
 
     def createTimeScaleLayout(self):
         time_scale_layout = QHBoxLayout()
+
         for hour in range(start_time, end_time + 1):
             for minute in range(0, 60, interval):
                 time_label = QLabel(f"{hour:02d}:{minute:02d}")
                 time_label.setFixedSize(50, 50)
                 time_scale_layout.addWidget(time_label)
+
+                # Вычисляем пиксель, соответствующий данному времени
+                pixel = int(((hour - start_time) * 60 + minute) * maxPixelsScroll / ((end_time - start_time) * 60))
+
+                # Добавляем соответствие пикселя времени в словарь
+                pixel_time_mapping[pixel] = datetime.strptime(f"{hour:02d}:{minute:02d}", "%H:%M")
+
                 if minute < 60 - interval:
                     line = QFrame(self.scroll_content)
                     line.setFrameShape(QFrame.VLine)
@@ -192,6 +249,8 @@ class RailroadStationApp(QMainWindow):
                 line.setFrameShape(QFrame.VLine)
                 line.setFrameShadow(QFrame.Sunken)
                 time_scale_layout.addWidget(line)
+
+        # Возвращаем словарь и макет временной шкалы
         return time_scale_layout
 
     def createHorizontalLines(self):
@@ -294,6 +353,7 @@ class DraggableButton(QPushButton):
         self.horizontal_lines = horizontal_lines
         self.setWindowFlags(Qt.WindowStaysOnTopHint)
         self.event_time_minutes = event_time_minutes
+        self.line_index = -1  # Добавляем атрибут line_index
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -305,15 +365,19 @@ class DraggableButton(QPushButton):
             new_pos = self.mapToParent(event.pos() - self.offset)
             button_width = int(self.event_time_minutes / (end_time * 60 - start_time * 60) * maxPixelsScroll)
             self.setFixedSize(button_width, 50)
-            for line in self.horizontal_lines:
+            for index, line in enumerate(self.horizontal_lines):
                 if line.geometry().contains(new_pos):
                     new_pos.setY(int(line.geometry().center().y() - self.height() / 2))
+                    self.line_index = index  # Устанавливаем line_index
                     break
+            else:
+                self.line_index = -1  # Если не найдена линия, сбрасываем line_index
             self.move(new_pos)
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.dragging = False
+
 
 
 if __name__ == "__main__":
