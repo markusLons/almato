@@ -3,9 +3,41 @@
         {
             "index": 0,
             "name": "",
-            "start_time": 5.0,
-            "end_time": 19.0,
+            "start_time": 4.0,
+            "end_time": 5.0,
             "line_index": 0,
+            "image_path": "Отправление.png"
+        },
+        {
+            "index": 1,
+            "name": "",
+            "start_time": 8.0,
+            "end_time": 12.0,
+            "line_index": 0,
+            "image_path": "Отправление.png"
+        },
+        {
+            "index": 2,
+            "name": "",
+            "start_time": 15.0,
+            "end_time": 26.0,
+            "line_index": 1,
+            "image_path": "Отправление.png"
+        },
+        {
+            "index": 3,
+            "name": "",
+            "start_time": 13.0,
+            "end_time": 16.0,
+            "line_index": 3,
+            "image_path": "Отправление.png"
+        },
+        {
+            "index": 4,
+            "name": "",
+            "start_time": 27.0,
+            "end_time": 41.0,
+            "line_index": 4,
             "image_path": "Отправление.png"
         }
     ],

@@ -2,7 +2,17 @@ import subprocess
 import sys
 import json
 import mysql.connector
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QMessageBox, QLineEdit
+from PyQt5.QtCore import Qt, pyqtSignal
+
+class EnterLineEdit(QLineEdit):
+    enterPressed = pyqtSignal()
+
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key_Enter, Qt.Key_Return):
+            self.enterPressed.emit()
+        else:
+            super().keyPressEvent(event)
 
 class LoginWindow(QWidget):
     def __init__(self):
@@ -11,18 +21,18 @@ class LoginWindow(QWidget):
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle('Вход')
+        self.setWindowTitle('Вход в систему составления расписаний')
         self.setGeometry(100, 100, 300, 150)
 
         layout = QVBoxLayout()
 
         self.username_label = QLabel('Имя пользователя:')
-        self.username_input = QLineEdit()
+        self.username_input = EnterLineEdit()
         layout.addWidget(self.username_label)
         layout.addWidget(self.username_input)
 
         self.password_label = QLabel('Пароль:')
-        self.password_input = QLineEdit()
+        self.password_input = EnterLineEdit()
         self.password_input.setEchoMode(QLineEdit.Password)
         layout.addWidget(self.password_label)
         layout.addWidget(self.password_input)
@@ -32,6 +42,10 @@ class LoginWindow(QWidget):
         layout.addWidget(self.login_button)
 
         self.setLayout(layout)
+
+        # Связываем сигнал enterPressed с функцией login
+        self.username_input.enterPressed.connect(self.login)
+        self.password_input.enterPressed.connect(self.login)
 
     def login(self):
         username = self.username_input.text()
