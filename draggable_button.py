@@ -3,7 +3,9 @@ import json
 
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QPushButton
+from PyQt5.QtWidgets import QPushButton, QMenu
+from PyQt5.QtGui import QPixmap
+
 
 class DraggableButton(QPushButton):
     def __init__(self, image_path, parent=None, horizontal_lines=None, event_time_minutes=0, name=""):
@@ -58,5 +60,3 @@ class DraggableButton(QPushButton):
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.dragging = False
-
-

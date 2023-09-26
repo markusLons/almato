@@ -414,6 +414,19 @@ class RailroadStationApp(QMainWindow):
         button.setGeometry(0, 0, 150, 50)
         button.show()
         self.buttons.append(button)
+        button.setContextMenuPolicy(Qt.CustomContextMenu)
+        button.customContextMenuRequested.connect(self.contextMenuEvent)
+        self.buttons.append(button)
+
+    def contextMenuEvent(self, event):
+        menu = QMenu(self)
+        copy_action = menu.addAction("Копировать")
+        action = menu.exec_(event.globalPos())
+        if action == copy_action:
+            self.copy_widget()
+
+    def copy_widget(self):
+        print("1")
 
 
 if __name__ == "__main__":

@@ -41,8 +41,6 @@ def get_end_coordinate(button):
     except Exception:
         return ("00", "00")
 
-
-
     return (start_time_button, end_time_button)
 
 
