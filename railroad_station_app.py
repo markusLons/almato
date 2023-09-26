@@ -1,24 +1,23 @@
+# railroad_station_app.py
 import os
+import json
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QToolBar, QAction, QPushButton, QWidget, QScrollArea, \
-    QVBoxLayout, QHBoxLayout, QLabel, QFrame, QSpacerItem, QSizePolicy, QInputDialog, QMenu
+
+import mysql.connector
+from PyQt5.QtWidgets import (
+    QMainWindow, QToolBar, QAction, QPushButton, QWidget, QScrollArea, QVBoxLayout,
+    QHBoxLayout, QLabel, QFrame, QSpacerItem, QSizePolicy, QInputDialog, QMenu,
+    QMessageBox, QApplication,
+)
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QMessageBox
-import json
-from datetime import datetime, timedelta
-import mysql.connector
+from datetime import datetime
 
-user_id = "1"
-map_id = "1"
 import EventManager
+from draggable_button import DraggableButton
 
-# Указываем время начала и конца отчета, а также интервал
-start_time = 8
-end_time = 22
-interval = 10
-maxPixelsScroll = 10000
 pixel_time_mapping = {}
+
 
 def get_end_coordinate(button):
     current_x = button.geometry().x()
@@ -41,14 +40,13 @@ def get_end_coordinate(button):
     except Exception:
         return ("00", "00")
 
-
-
     return (start_time_button, end_time_button)
 
 
 class RailroadStationApp(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.load_constants_from_json()
         self.setWindowTitle("Железнодорожная станция")
         self.setGeometry(100, 100, 800, 600)
         self.showFullScreen()
@@ -60,7 +58,23 @@ class RailroadStationApp(QMainWindow):
         self.horizontal_lines = []
 
         self.initUI()
+    def load_constants_from_json(self):
+        try:
+            # Открываем файл mapConstant.json и читаем константы
+            with open('mapConstant.json', 'r') as json_file:
+                constants = json.load(json_file)
 
+            # Задаем значения константам
+            global user_id, map_id, start_time, end_time, interval, maxPixelsScroll
+            user_id = constants["user_id"]
+            map_id = constants["map_id"]
+            start_time = constants["start_time"]
+            end_time = constants["end_time"]
+            interval = constants["interval"]
+            maxPixelsScroll = constants["maxPixelsScroll"]
+
+        except Exception as e:
+            print(f"Ошибка при загрузке констант из JSON: {e}")
     def clear_current_state(self):
         """
         Очищает текущее состояние приложения, удаляя все кнопки и линии.
@@ -147,17 +161,40 @@ class RailroadStationApp(QMainWindow):
         dropdownMenu.addAction(removeHorizontalLineAction_2)
 
         canvasMenu.addMenu(dropdownMenu)
+    def get_map_data(self):
+        state = {}  # Создаем пустой словарь для сохранения состояния
 
-    # main.py
-    import sys
-    from PyQt5.QtWidgets import QApplication
-    from railroad_station_app import RailroadStationApp
+        # Создаем список для хранения информации о кнопках
+        buttons_info = []
 
-    if __name__ == "__main__":
-        app = QApplication(sys.argv)
-        window = RailroadStationApp()
-        window.show()
-        sys.exit(app.exec_())
+        for i, button in enumerate(self.buttons):
+            start_time, end_time = get_end_coordinate(button)
+            button_info = {
+                'index': i,  # Порядковый номер кнопки
+                'name': button.text(),  # Название кнопки (предполагается, что текст кнопки содержит имя)
+                'start_time': start_time,  # Время начала
+                'end_time': end_time,  # Время окончания
+                'line_index': button.line_index,  # Номер строки, на которой находится кнопка
+                'image_path': self.current_image_path,  # Путь к изображению
+            }
+            buttons_info.append(button_info)
+
+        state['buttons'] = buttons_info  # Добавляем информацию о кнопках в состояние
+        state['num_lines'] = self.num_lines  # Добавляем количество полос
+
+        json_state = json.dumps(state, indent=4, ensure_ascii=False)
+
+        # Теперь вы можете использовать json_state как строку или сохранить ее в переменной
+        print("Состояние успешно сохранено:")
+        print(json_state)
+        # Теперь можно сохранить состояние в файл JSON
+        try:
+            with open('state.json', 'w') as file:
+                json.dump(state, file, indent=4, ensure_ascii=False)
+                print("Состояние успешно сохранено в файл 'state.json'")
+        except Exception as e:
+            print(f"Ошибка при сохранении состояния: {e}")
+        return json_state
 
     def save_state(self):
 
@@ -218,7 +255,7 @@ class RailroadStationApp(QMainWindow):
                 button.setGeometry(0, 0, 150, 50)
                 button.show()
                 self.buttons.append(button)
-                self.set_button_position(button, button_info.get('start_time'), button_info.get('line_index'))
+                #self.set_button_position(button, button_info.get('start_time'), button_info.get('line_index'))
 
             self.current_image_path = state_data.get('current_image_path', None)
 
@@ -226,6 +263,64 @@ class RailroadStationApp(QMainWindow):
 
         except Exception as e:
             QMessageBox.warning(self, "Ошибка загрузки", f"Произошла ошибка при загрузке состояния: {str(e)}")
+    def add_horizontal_line(self):
+        #if self.horizontal_lines is None:
+        #    self.horizontal_lines = []  # Initialize it if it's None
+        user_input, ok = QInputDialog.getInt(self, 'Введите количество полос', 'Количество:')
+        if ok:
+            self.count_gorisontal_line = user_input
+            layout = self.scroll_area.widget().layout()
+            for _ in range(user_input):
+                line = QPushButton()
+                line.setFixedSize(maxPixelsScroll, 50)
+                self.horizontal_lines.append(line)
+                layout.addWidget(line)
+                spacer = QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum)
+                layout.addItem(spacer)
+            self.scroll_area.widget().setLayout(layout)
+            self.num_lines += user_input  # Обновляем количество полос
+
+    def add_horizontal_line1(self):
+        self.count_gorisontal_line = 1
+        layout = self.scroll_area.widget().layout()
+        line = QPushButton()
+        line.setFixedSize(maxPixelsScroll, 50)
+        self.horizontal_lines.append(line)
+        layout.addWidget(line)
+        spacer = QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        layout.addItem(spacer)
+        self.scroll_area.widget().setLayout(layout)
+        self.num_lines += 1
+    def remove_horizontal_line_ind(self):
+        index, ok = QInputDialog.getInt(self, 'Введите индекс полосы:', 'Индекс:')
+        if ok:
+            if 0 <= index < len(self.horizontal_lines):
+                line = self.horizontal_lines.pop(index)
+                line.setParent(None)
+                del line
+                self.num_lines -= 1
+                self.scroll_area.widget().update()
+            else:
+                QMessageBox.warning(self, "Предупреждение", "Несуществующая строка!", QMessageBox.Ok)
+    def remove_horisontal_line_first(self):
+        if len(self.horizontal_lines)>0:
+            line = self.horizontal_lines.pop(0)
+            line.setParent(None)
+            del line
+            self.scroll_area.widget().update()
+            self.num_lines -=1
+        else:
+            QMessageBox.warning(self, "Предупреждение", "Несуществующая строка!", QMessageBox.Ok)
+
+    def remove_horisontal_line_last(self):
+        if len(self.horizontal_lines)>0:
+            line = self.horizontal_lines.pop(len(self.horizontal_lines)-1)
+            line.setParent(None)
+            del line
+            self.scroll_area.widget().update()
+            self.num_lines -= 1
+        else:
+            QMessageBox.warning(self, "Предупреждение", "Несуществующая строка!", QMessageBox.Ok)
 
     def createToolBar(self):
         self.tool_bar = QToolBar()
@@ -241,7 +336,6 @@ class RailroadStationApp(QMainWindow):
 
         # Add this line to initialize self.horizontal_lines
         self.horizontal_lines = []
-
     def createScrollArea(self):
         self.scroll_area = QScrollArea(self)
         self.scroll_area.setWidgetResizable(True)
@@ -321,106 +415,6 @@ class RailroadStationApp(QMainWindow):
         button.show()
         self.buttons.append(button)
 
-    def add_horizontal_line(self):
-        #if self.horizontal_lines is None:
-        #    self.horizontal_lines = []  # Initialize it if it's None
-        user_input, ok = QInputDialog.getInt(self, 'Введите количество полос', 'Количество:')
-        if ok:
-            self.count_gorisontal_line = user_input
-            layout = self.scroll_area.widget().layout()
-            for _ in range(user_input):
-                line = QPushButton()
-                line.setFixedSize(maxPixelsScroll, 50)
-                self.horizontal_lines.append(line)
-                layout.addWidget(line)
-                spacer = QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum)
-                layout.addItem(spacer)
-            self.scroll_area.widget().setLayout(layout)
-            self.num_lines += user_input  # Обновляем количество полос
-
-    def add_horizontal_line1(self):
-        self.count_gorisontal_line = 1
-        layout = self.scroll_area.widget().layout()
-        line = QPushButton()
-        line.setFixedSize(maxPixelsScroll, 50)
-        self.horizontal_lines.append(line)
-        layout.addWidget(line)
-        spacer = QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum)
-        layout.addItem(spacer)
-        self.scroll_area.widget().setLayout(layout)
-        self.num_lines += 1
-
-    def remove_horizontal_line_ind(self):
-        index, ok = QInputDialog.getInt(self, 'Введите индекс полосы:', 'Индекс:')
-        if ok:
-            if 0 <= index < len(self.horizontal_lines):
-                line = self.horizontal_lines.pop(index)
-                line.setParent(None)
-                del line
-                self.num_lines -= 1
-                self.scroll_area.widget().update()
-            else:
-                QMessageBox.warning(self, "Предупреждение", "Несуществующая строка!", QMessageBox.Ok)
-
-    def remove_horisontal_line_first(self):
-        if len(self.horizontal_lines)>0:
-            line = self.horizontal_lines.pop(0)
-            line.setParent(None)
-            del line
-            self.scroll_area.widget().update()
-            self.num_lines -=1
-        else:
-            QMessageBox.warning(self, "Предупреждение", "Несуществующая строка!", QMessageBox.Ok)
-
-    def remove_horisontal_line_last(self):
-        if len(self.horizontal_lines)>0:
-            line = self.horizontal_lines.pop(len(self.horizontal_lines)-1)
-            line.setParent(None)
-            del line
-            self.scroll_area.widget().update()
-            self.num_lines -= 1
-        else:
-            QMessageBox.warning(self, "Предупреждение", "Несуществующая строка!", QMessageBox.Ok)
-
-
-class DraggableButton(QPushButton):
-    def __init__(self, image_path, parent=None, horizontal_lines=None, event_time_minutes=0, name = ""):
-        super().__init__(parent)
-        self.name = name
-        self.setMouseTracking(True)
-        self.setIcon(QIcon(image_path))
-        self.setIconSize(QSize(50, 50))
-        self.dragging = False
-        self.offset = None
-        self.horizontal_lines = horizontal_lines
-        self.setWindowFlags(Qt.WindowStaysOnTopHint)
-        self.event_time_minutes = event_time_minutes
-        self.line_index = -1  # Добавляем атрибут line_index
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            self.dragging = True
-            self.offset = event.pos()
-
-    def mouseMoveEvent(self, event):
-        if self.dragging:
-            new_pos = self.mapToParent(event.pos() - self.offset)
-            button_width = int(self.event_time_minutes / (end_time * 60 - start_time * 60) * maxPixelsScroll)
-            self.setFixedSize(button_width, 50)
-            for index, line in enumerate(self.horizontal_lines):
-                if line.geometry().contains(new_pos):
-                    new_pos.setY(int(line.geometry().center().y() - self.height() / 2))
-                    self.line_index = index  # Устанавливаем line_index
-                    break
-            else:
-                self.line_index = -1  # Если не найдена линия, сбрасываем line_index
-            self.move(new_pos)
-
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            self.dragging = False
-
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
@@ -440,16 +434,5 @@ if __name__ == "__main__":
     "num_lines": 12
 }""")
     window.load_state_from_data(state_data)
-    # if len(sys.argv) == 2:
-    #     # Если аргументов командной строки 2, то предполагаем, что первый аргумент - это JSON-строка.
-    #     json_string = sys.argv[1]
-    #
-    #     # Попробуйте загрузить JSON-строку и обновить состояние приложения
-    #     try:
-    #         state_data = json.loads(json_string)
-    #         window.load_state_from_data(state_data)
-    #     except json.JSONDecodeError as e:
-    #         QMessageBox.warning(window, "Ошибка загрузки", f"Ошибка при разборе JSON: {str(e)}")
-
     window.show()
     sys.exit(app.exec_())
