@@ -7,10 +7,10 @@ import mysql.connector
 from PyQt5.QtWidgets import (
     QMainWindow, QToolBar, QAction, QPushButton, QWidget, QScrollArea, QVBoxLayout,
     QHBoxLayout, QLabel, QFrame, QSpacerItem, QSizePolicy, QInputDialog, QMenu,
-    QMessageBox, QApplication,
+    QMessageBox, QApplication, QDesktopWidget,
 )
 from PyQt5.QtCore import Qt, QSize
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QCursor
 from datetime import datetime
 
 import EventManager
@@ -411,6 +411,7 @@ class RailroadStationApp(QMainWindow):
     def get_widget(self, image_path, event_time_minutes, name = ""):
         self.current_image_path = image_path
         button = DraggableButton(image_path, self.scroll_content, self.horizontal_lines, event_time_minutes, name = name)
+
         button.setGeometry(0, 0, 150, 50)
         button.show()
         self.buttons.append(button)
@@ -421,12 +422,18 @@ class RailroadStationApp(QMainWindow):
     def contextMenuEvent(self, event):
         menu = QMenu(self)
         copy_action = menu.addAction("Копировать")
+        cut_action = menu.addAction("Вырезать")
         action = menu.exec_(event.globalPos())
         if action == copy_action:
             self.copy_widget()
+        if action == cut_action:
+            self.cut_widget()
 
     def copy_widget(self):
         print("1")
+
+    def cut_widget(self):
+        print("2")
 
 
 if __name__ == "__main__":
