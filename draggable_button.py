@@ -7,6 +7,65 @@ from PyQt5.QtWidgets import QPushButton
 from datetime import datetime, timedelta
 import EventManager
 
+from PyQt5.QtWidgets import QDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout
+
+class ButtonInfoDialog(QDialog):
+    def __init__(self, button):
+        super().__init__()
+        self.button = button
+
+        self.setWindowTitle("Информация о кнопке")
+        self.layout = QVBoxLayout()
+
+        self.start_time_edit = QLineEdit()
+        self.start_time_edit.setText(str(self.button.start_my_time))
+        self.layout.addWidget(QLabel("Начальное время:"))
+        self.layout.addWidget(self.start_time_edit)
+
+        self.duration_edit = QLineEdit()
+        self.duration_edit.setText(str(self.button.duration))
+        self.layout.addWidget(QLabel("Длительность:"))
+        self.layout.addWidget(self.duration_edit)
+
+        self.description_edit = QLineEdit()
+        self.description_edit.setText(self.button.description)
+        self.layout.addWidget(QLabel("Описание:"))
+        self.layout.addWidget(self.description_edit)
+
+        self.apply_button = QPushButton("Применить")
+        self.apply_button.clicked.connect(self.apply_changes)
+        self.layout.addWidget(self.apply_button)
+
+        self.delete_button = QPushButton("Удалить")
+        self.delete_button.clicked.connect(self.delete_button_clicked)  # Измените здесь имя слота
+        self.layout.addWidget(self.delete_button)
+
+        self.setLayout(self.layout)
+
+    def delete_button_clicked(self):  # Измененное имя метода
+        # Удалите кнопку из интерфейса
+        self.button.deleteLater()
+        self.accept()
+
+    def apply_changes(self):
+        # Примените изменения к параметрам кнопки
+        new_start_time = self.start_time_edit.text()
+        new_duration = self.duration_edit.text()
+        new_description = self.description_edit.text()
+
+        # Обновите параметры кнопки
+        self.button.start_my_time = datetime.strptime(new_start_time, "%H:%M")
+        self.button.duration = int(new_duration)
+        self.button.description = new_description
+
+        # Закройте диалоговое окно
+        self.accept()
+
+    def delete_button(self):
+        # Удалите кнопку из интерфейса
+        self.button.deleteLater()
+        self.accept()
+
 
 class DraggableButton(QPushButton):
     def __init__(self, parent=None, simple = None, line_index = None, time_now = None, pixel_time_mapping = None):
@@ -22,7 +81,6 @@ class DraggableButton(QPushButton):
         self.start_my_time = ""
         self.end_my_time = ""
         self.line_index = line_index
-
         if self.line_index is not None:
             self.move(self.x(), self.get_middle_y_coordinate_line(self.my_parent.horizontal_lines[line_index]))
 
@@ -41,6 +99,13 @@ class DraggableButton(QPushButton):
         #self.horizontal_lines = horizontal_lines
         self.setWindowFlags(Qt.WindowStaysOnTopHint)
         #self.event_time_minutes = event_time_minutes
+
+    def open_info_dialog(self):
+        dialog = ButtonInfoDialog(self)
+        if dialog.exec_() == QDialog.Accepted:
+            # Действие после закрытия диалогового окна
+            pass
+
     def refresh_line(self):
         if(self.line_index != -1):
             middle_y = self.my_parent.horizontal_lines[self.line_index].geometry().center().y()
@@ -49,7 +114,6 @@ class DraggableButton(QPushButton):
     def get_middle_y_coordinate_line(self, line):
         middle_y = line.geometry().center().y()
         return middle_y
-
 
     def get_coordinates_by_time(self, start_time, end_time):
 
@@ -72,8 +136,8 @@ class DraggableButton(QPushButton):
             start_pixel = (start_time - self.my_parent.pixel_time_mapping[start_dict] ).total_seconds() //60 +  start_dict
             end_pixel = ((end_time - start_time).total_seconds() // 60) * pixels_on_min + start_pixel
 
-            button_width = end_pixel - start_pixel
-            self.setGeometry(start_pixel, self.geometry().y(), button_width, self.height())
+            button_width = int(self.duration) * pixels_on_min
+            self.setGeometry(start_pixel+self.width()//2, self.geometry().y(), button_width, self.height())
 
         except Exception as e:
             print(f"Ошибка при вычислении координат: {e}")
@@ -111,7 +175,13 @@ class DraggableButton(QPushButton):
             return (datetime.min, datetime.min)
 
     def mousePressEvent(self, event):
+        if event.button() == Qt.RightButton:
+            self.dragging = True
+            self.offset = event.pos()
+            self.open_info_dialog()
         if event.button() == Qt.LeftButton:
+
+
             self.dragging = True
             self.offset = event.pos()
     def load_constants_from_json(self):

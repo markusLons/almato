@@ -3,15 +3,43 @@
         {
             "index": 0,
             "name": "Закрепление/Раскрепление",
-            "start_time": "08:53",
-            "end_time": "09:05",
+            "start_time": "08:30",
+            "end_time": "08:42",
             "line_index": 1
         },
         {
             "index": 1,
             "name": "Отцепка/прицепка поездного локомотива",
-            "start_time": "09:15",
-            "end_time": "09:28",
+            "start_time": "08:50",
+            "end_time": "09:03",
+            "line_index": 2
+        },
+        {
+            "index": 2,
+            "name": "Метка прибытия/отправления пассажирского поезда",
+            "start_time": "08:03",
+            "end_time": "08:15",
+            "line_index": 0
+        },
+        {
+            "index": 3,
+            "name": "Метка прибытия/отправления пассажирского поезда",
+            "start_time": "08:20",
+            "end_time": "08:33",
+            "line_index": 2
+        },
+        {
+            "index": 4,
+            "name": "Отправление",
+            "start_time": "08:15",
+            "end_time": "08:28",
+            "line_index": 0
+        },
+        {
+            "index": 5,
+            "name": "Прибытие/Отправление",
+            "start_time": "08:06",
+            "end_time": "08:19",
             "line_index": 2
         }
     ],

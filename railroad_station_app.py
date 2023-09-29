@@ -264,9 +264,10 @@ class RailroadStationApp(QMainWindow):
             #self.set_button_position(button, button_info.get('start_time'), button_info.get('line_index'))
 
         self.current_image_path = state_data.get('current_image_path', None)
+        QMessageBox.information(self, "Загрузка состояния", "Состояние успешно загружено.")
         for i in self.buttons:
             i.refresh_line()
-        QMessageBox.information(self, "Загрузка состояния", "Состояние успешно загружено.")
+
 
         #except Exception as e:
             #QMessageBox.warning(self, "Ошибка загрузки", f"Произошла ошибка при загрузке состояния: {str(e)}")
