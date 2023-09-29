@@ -2,20 +2,18 @@
     "buttons": [
         {
             "index": 0,
-            "name": "",
-            "start_time": 15.0,
-            "end_time": 21.0,
-            "line_index": 0,
-            "image_path": "Прибытие_отпраление_пасажирского_поезда.png"
+            "name": "Закрепление/Раскрепление",
+            "start_time": "08:53",
+            "end_time": "09:05",
+            "line_index": 1
         },
         {
             "index": 1,
-            "name": "",
-            "start_time": 17.0,
-            "end_time": 28.0,
-            "line_index": 2,
-            "image_path": "Прибытие_отпраление_пасажирского_поезда.png"
+            "name": "Отцепка/прицепка поездного локомотива",
+            "start_time": "09:15",
+            "end_time": "09:28",
+            "line_index": 2
         }
     ],
-    "num_lines": 12
+    "num_lines": 8
 }

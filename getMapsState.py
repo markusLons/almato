@@ -131,7 +131,7 @@ class MapsWindow(QWidget):
                 map_data_str = map_data[0].decode('utf-8')
 
                 # Запустить main.py и передать данные в качестве аргумента
-                main_command = f"python main.py '{map_data_str}'"
+                main_command = f"python main.py {map_id}"
                 subprocess.Popen(main_command, shell=True)
 
             cursor.close()

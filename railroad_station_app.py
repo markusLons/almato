@@ -19,32 +19,36 @@ from draggable_button import DraggableButton
 pixel_time_mapping = {}
 
 
-def get_end_coordinate(button):
-    current_x = button.geometry().x()
-    button_width = button.width()
-    end_x = current_x + button_width
-    start_dict = -1
-    ens_dict = -1
-    before_i = -1
-    for i in pixel_time_mapping.keys():
-        if i >= start_dict and start_dict == -1:
-            start_dict = before_i
-        if i > end_x:
-            ens_dict = i
-            break
-        before_i = i
+def load_map_data_from_sql(item):
+    map_info={}
     try:
-        pixels_on_min = (ens_dict - start_dict) / ((pixel_time_mapping[ens_dict] - pixel_time_mapping[start_dict]).total_seconds() // 60)
-        start_time_button = (current_x - start_dict)//pixels_on_min
-        end_time_button = (current_x - start_dict + button_width) // pixels_on_min
-    except Exception:
-        return ("00", "00")
+        with open('db_config.json', 'r') as config_file:
+            config = json.load(config_file)
 
-    return (start_time_button, end_time_button)
+        connection = mysql.connector.connect(**config)
+        cursor = connection.cursor()
+
+        # Загрузка данных о выбранной карте
+        query = "SELECT name, map_data, comment, data_create, data_edit FROM maps WHERE map_id = %s"
+        cursor.execute(query, (item,))
+        map_data = cursor.fetchone()
+
+        if map_data:
+            map_info["name"] = map_data[0]
+            map_info["data"] = map_data[1].decode('utf-8')
+            map_info["comment"] = map_data[2].decode('utf-8')
+
+        cursor.close()
+        connection.close()
+        return map_info
+    except mysql.connector.Error as err:
+        print(err)
+
 
 
 class RailroadStationApp(QMainWindow):
     def __init__(self):
+        self.pixel_time_mapping = {}
         super().__init__()
         self.load_constants_from_json()
         self.setWindowTitle("Железнодорожная станция")
@@ -56,7 +60,6 @@ class RailroadStationApp(QMainWindow):
 
         self.num_lines = 0
         self.horizontal_lines = []
-
         self.initUI()
     def load_constants_from_json(self):
         try:
@@ -168,14 +171,13 @@ class RailroadStationApp(QMainWindow):
         buttons_info = []
 
         for i, button in enumerate(self.buttons):
-            start_time, end_time = get_end_coordinate(button)
+            start_time, end_time = button.get_coordinate()
             button_info = {
                 'index': i,  # Порядковый номер кнопки
-                'name': button.text(),  # Название кнопки (предполагается, что текст кнопки содержит имя)
-                'start_time': start_time,  # Время начала
-                'end_time': end_time,  # Время окончания
+                'name': button.simple,  # Название кнопки (предполагается, что текст кнопки содержит имя)
+                'start_time': start_time.strftime("%H:%M"),  # Время начала
+                'end_time': end_time.strftime("%H:%M"),  # Время окончания
                 'line_index': button.line_index,  # Номер строки, на которой находится кнопка
-                'image_path': self.current_image_path,  # Путь к изображению
             }
             buttons_info.append(button_info)
 
@@ -238,31 +240,36 @@ class RailroadStationApp(QMainWindow):
                 connection.close()
 
     def load_state_from_data(self, state_data):
-        try:
-            # Очищаем текущее состояние
-            self.clear_current_state()
+        #try:
 
-            # Восстанавливаем состояние из данных
-            self.num_lines = state_data.get('num_lines', 0)
-            self.horizontal_lines = self.createHorizontalLines()
+        # Очищаем текущее состояние
+        self.clear_current_state()
 
-            buttons_info = state_data.get('buttons', [])
-            for button_info in buttons_info:
-                button_semple = button_info.get('sample')
-                image_path = button_info.get('image_path')
-                event_time_minutes = button_info.get('end_time') - button_info.get('start_time')
-                button = DraggableButton(image_path, self.scroll_content, self.horizontal_lines, event_time_minutes)
-                button.setGeometry(0, 0, 150, 50)
-                button.show()
-                self.buttons.append(button)
-                #self.set_button_position(button, button_info.get('start_time'), button_info.get('line_index'))
+        # Восстанавливаем состояние из данных
+        self.num_lines = state_data.get('num_lines', 0)
+        self.horizontal_lines = self.createHorizontalLines()
 
-            self.current_image_path = state_data.get('current_image_path', None)
+        buttons_info = state_data.get('buttons', [])
+        for button_info in buttons_info:
+            button = DraggableButton(parent=self,
+                                     simple=button_info["name"],
+                                     time_now=(button_info.get('start_time'),
+                                               button_info.get('end_time')),
+                                     pixel_time_mapping=pixel_time_mapping,
+                                     line_index= int(button_info.get("line_index"))
+                                     )
+            #button.setGeometry(0, 0, 150, 50)
+            button.show()
+            self.buttons.append(button)
+            #self.set_button_position(button, button_info.get('start_time'), button_info.get('line_index'))
 
-            QMessageBox.information(self, "Загрузка состояния", "Состояние успешно загружено.")
+        self.current_image_path = state_data.get('current_image_path', None)
+        for i in self.buttons:
+            i.refresh_line()
+        QMessageBox.information(self, "Загрузка состояния", "Состояние успешно загружено.")
 
-        except Exception as e:
-            QMessageBox.warning(self, "Ошибка загрузки", f"Произошла ошибка при загрузке состояния: {str(e)}")
+        #except Exception as e:
+            #QMessageBox.warning(self, "Ошибка загрузки", f"Произошла ошибка при загрузке состояния: {str(e)}")
     def add_horizontal_line(self):
         #if self.horizontal_lines is None:
         #    self.horizontal_lines = []  # Initialize it if it's None
@@ -332,7 +339,7 @@ class RailroadStationApp(QMainWindow):
             action_button = QAction(QIcon(image_path), simple, self)
             self.tool_bar.addAction(action_button)
             action_button.triggered.connect(
-                lambda _, path=image_path, time=simples[simple]["Time"]: self.get_widget(path, time, simple))
+                lambda _, simple=simple: self.get_widget(simple))
 
         # Add this line to initialize self.horizontal_lines
         self.horizontal_lines = []
@@ -371,7 +378,7 @@ class RailroadStationApp(QMainWindow):
                 pixel = int(((hour - start_time) * 60 + minute) * maxPixelsScroll / ((end_time - start_time) * 60))
 
                 # Добавляем соответствие пикселя времени в словарь
-                pixel_time_mapping[pixel] = datetime.strptime(f"{hour:02d}:{minute:02d}", "%H:%M")
+                self.pixel_time_mapping[pixel] = datetime.strptime(f"{hour:02d}:{minute:02d}", "%H:%M")
 
                 if minute < 60 - interval:
                     line = QFrame(self.scroll_content)
@@ -408,31 +415,23 @@ class RailroadStationApp(QMainWindow):
         self.scroll_area.widget().setLayout(layout)
         return self.horizontal_lines
 
-    def get_widget(self, image_path, event_time_minutes, name = ""):
-        self.current_image_path = image_path
-        button = DraggableButton(image_path, self.scroll_content, self.horizontal_lines, event_time_minutes, name = name)
+    def get_widget(self, simple):
+        button = DraggableButton(parent=self, simple=simple)
         button.setGeometry(0, 0, 150, 50)
         button.show()
         self.buttons.append(button)
 
 
-if __name__ == "__main__":
+def main(id):
+    print(id)
     app = QApplication(sys.argv)
     window = RailroadStationApp()
-    state_data = json.loads("""{
-    "buttons": [
-        {
-            "index": 5,
-            "name": "",
-            "start_time": 5.0,
-            "end_time": 11.0,
-            "line_index": 2,
-            "image_path": "Закрепление_Раскрепление.jpg",
-            "sample": "Отцепка/прицепка поездного локомотива"
-        }
-    ],
-    "num_lines": 12
-}""")
-    window.load_state_from_data(state_data)
+    data = load_map_data_from_sql(id)
+    print(data)
+    data = json.loads(data["data"])
+    window.load_state_from_data(data)
+
     window.show()
     sys.exit(app.exec_())
+
+
