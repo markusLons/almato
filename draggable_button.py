@@ -70,7 +70,8 @@ class ButtonInfoDialog(QDialog):
 
 class DraggableButton(QPushButton):
     def __init__(self, parent=None, simple=None, line_index=None, time_now=None, pixel_time_mapping=None):
-        super().__init__(parent)
+        #Добавить сюда вот parent.scroll_area.widget().layout()
+        super().__init__(parent.scroll_content)  # Устанавливаем виджет-родитель
         self.my_parent = parent
         self.pixel_time_mapping = pixel_time_mapping
         simples = EventManager.get_simple_events()
@@ -82,9 +83,9 @@ class DraggableButton(QPushButton):
         self.start_my_time = ""
         self.end_my_time = ""
         # test
-        self.label = QLabel(parent)  # Создаем QLabel с родительским виджетом
+        self.label = QLabel(parent.scroll_content)  # Создаем QLabel с родительским виджетом
         self.label.setAlignment(Qt.AlignCenter)  # Устанавливаем выравнивание текста по центру
-        self.show_text_above("aaaaa")
+        self.show_text_above("")
 
         self.line_index = line_index
         if self.line_index is not None:
