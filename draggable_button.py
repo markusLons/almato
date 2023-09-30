@@ -9,6 +9,7 @@ import EventManager
 
 from PyQt5.QtWidgets import QDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout
 
+
 class ButtonInfoDialog(QDialog):
     def __init__(self, button):
         super().__init__()
@@ -68,7 +69,7 @@ class ButtonInfoDialog(QDialog):
 
 
 class DraggableButton(QPushButton):
-    def __init__(self, parent=None, simple = None, line_index = None, time_now = None, pixel_time_mapping = None):
+    def __init__(self, parent=None, simple=None, line_index=None, time_now=None, pixel_time_mapping=None):
         super().__init__(parent)
         self.my_parent = parent
         self.pixel_time_mapping = pixel_time_mapping
@@ -80,6 +81,11 @@ class DraggableButton(QPushButton):
         self.setMouseTracking(True)
         self.start_my_time = ""
         self.end_my_time = ""
+        # test
+        self.label = QLabel(parent)  # Создаем QLabel с родительским виджетом
+        self.label.setAlignment(Qt.AlignCenter)  # Устанавливаем выравнивание текста по центру
+        self.show_text_above("aaaaa")
+
         self.line_index = line_index
         if self.line_index is not None:
             self.move(self.x(), self.get_middle_y_coordinate_line(self.my_parent.horizontal_lines[line_index]))
@@ -96,9 +102,34 @@ class DraggableButton(QPushButton):
         self.setIconSize(QSize(50, 50))
         self.dragging = False
         self.offset = None
-        #self.horizontal_lines = horizontal_lines
+        # self.horizontal_lines = horizontal_lines
         self.setWindowFlags(Qt.WindowStaysOnTopHint)
-        #self.event_time_minutes = event_time_minutes
+        # self.event_time_minutes = event_time_minutes
+
+    def show_text_above(self, text):
+        # Устанавливаем текст и позицию QLabel рядом с кнопкой
+        label_width = self.label.width()
+        label_height = self.label.height()
+        button_x = self.geometry().x()
+        button_y = self.geometry().y()
+        label_x = button_x  # 5 - отступ между кнопкой и текстом
+        label_y = button_y - 40  # Центрируем текст по вертикали относительно кнопки
+        self.label.setGeometry(label_x, label_y, label_width, label_height)
+        try:
+            self.label.setText(text[0].strftime("%H:%M"))
+        except Exception:
+            self.label.setText("-")
+
+        self.label.show()
+
+    def show_text(self, text):
+        # Устанавливаем текст и отображаем QLabel
+        self.label.setText(text)
+        self.label.show()
+
+    def hide_text(self):
+        # Скрываем QLabel
+        self.label.hide()
 
     def open_info_dialog(self):
         dialog = ButtonInfoDialog(self)
@@ -107,7 +138,7 @@ class DraggableButton(QPushButton):
             pass
 
     def refresh_line(self):
-        if(self.line_index != -1):
+        if (self.line_index != -1):
             middle_y = self.my_parent.horizontal_lines[self.line_index].geometry().center().y()
             self.move(self.x(), middle_y)
 
@@ -133,11 +164,12 @@ class DraggableButton(QPushButton):
             pixels_on_min = (ens_dict - start_dict) / (
                     (self.my_parent.pixel_time_mapping[ens_dict] - self.my_parent.pixel_time_mapping[
                         start_dict]).total_seconds() // 60)
-            start_pixel = (start_time - self.my_parent.pixel_time_mapping[start_dict] ).total_seconds() //60 +  start_dict
+            start_pixel = (start_time - self.my_parent.pixel_time_mapping[
+                start_dict]).total_seconds() // 60 + start_dict
             end_pixel = ((end_time - start_time).total_seconds() // 60) * pixels_on_min + start_pixel
 
             button_width = int(self.duration) * pixels_on_min
-            self.setGeometry(start_pixel+self.width()//2, self.geometry().y(), button_width, self.height())
+            self.setGeometry(start_pixel + self.width() // 2, self.geometry().y(), button_width, self.height())
 
         except Exception as e:
             print(f"Ошибка при вычислении координат: {e}")
@@ -180,10 +212,9 @@ class DraggableButton(QPushButton):
             self.offset = event.pos()
             self.open_info_dialog()
         if event.button() == Qt.LeftButton:
-
-
             self.dragging = True
             self.offset = event.pos()
+
     def load_constants_from_json(self):
         try:
             # Открываем файл mapConstant.json и читаем константы
@@ -203,11 +234,13 @@ class DraggableButton(QPushButton):
             print(f"Ошибка при загрузке констант из JSON: {e}")
 
     def mouseMoveEvent(self, event):
+
         if self.dragging:
+            self.show_text_above(self.get_coordinate())
             new_pos = self.mapToParent(event.pos() - self.offset)
             for index, line in enumerate(self.my_parent.horizontal_lines):
                 if line.geometry().contains(new_pos):
-                    new_pos.setY(int(line.geometry().center().y() ))
+                    new_pos.setY(int(line.geometry().center().y()))
                     self.line_index = index
                     print(index)
                     self.my_line = index
@@ -215,8 +248,8 @@ class DraggableButton(QPushButton):
             else:
                 self.line_index = -1
             self.move(new_pos)
+
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.dragging = False
-
-
+            self.hide_text()
