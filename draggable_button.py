@@ -3,7 +3,7 @@ import json
 
 from PyQt5.QtCore import QSize, Qt, QRect
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QPushButton
+from PyQt5.QtWidgets import QPushButton, QCheckBox
 from datetime import datetime, timedelta
 import EventManager
 
@@ -19,7 +19,7 @@ class ButtonInfoDialog(QDialog):
         self.layout = QVBoxLayout()
 
         self.start_time_edit = QLineEdit()
-        self.start_time_edit.setText(str(self.button.start_my_time))
+        self.start_time_edit.setText(str(self.button.start_my_time.strftime("%H:%M")))
         self.layout.addWidget(QLabel("Начальное время:"))
         self.layout.addWidget(self.start_time_edit)
 
@@ -27,6 +27,15 @@ class ButtonInfoDialog(QDialog):
         self.duration_edit.setText(str(self.button.duration))
         self.layout.addWidget(QLabel("Длительность:"))
         self.layout.addWidget(self.duration_edit)
+
+        self.number_train = QLineEdit()
+        self.number_train.setText(str(self.button.train))
+        self.layout.addWidget(QLabel("Номер поезда:"))
+        self.layout.addWidget(self.number_train)
+
+        self.flag_train = QCheckBox("Показывать номер поезда")
+        self.flag_train.setChecked(self.button.train_flag)
+        self.layout.addWidget(self.flag_train)
 
         self.description_edit = QLineEdit()
         self.description_edit.setText(self.button.description)
@@ -44,8 +53,8 @@ class ButtonInfoDialog(QDialog):
         self.setLayout(self.layout)
 
     def delete_button_clicked(self):  # Измененное имя метода
-        # Удалите кнопку из интерфейса
-        self.button.deleteLater()
+        self.button.setParent(None)
+        self.button.my_parent.buttons.remove(self.button)
         self.accept()
 
     def apply_changes(self):
@@ -53,12 +62,24 @@ class ButtonInfoDialog(QDialog):
         new_start_time = self.start_time_edit.text()
         new_duration = self.duration_edit.text()
         new_description = self.description_edit.text()
+        new_flag_train = self.flag_train.isChecked()
+        new_train = self.number_train.text()
 
         # Обновите параметры кнопки
-        self.button.start_my_time = datetime.strptime(new_start_time, "%H:%M")
-        self.button.duration = int(new_duration)
-        self.button.description = new_description
-
+        if new_start_time != self.start_time_edit.text() or self.description_edit.text() != new_description:
+            self.button.train = new_train
+            self.button.duration = int(new_duration)
+            self.button.description = new_description
+            start_my_time = datetime.strptime(new_start_time, "%H:%M")
+            delta = timedelta(minutes=int(self.button.duration))
+            end_my_time = start_my_time + delta
+            self.button.start_my_time = start_my_time
+            self.button.end_my_time = end_my_time
+            self.button.get_coordinates_by_time(start_my_time, end_my_time)
+        #######
+        if not new_flag_train:
+            self.button.hide_train_label()
+        self.button.train_flag = new_flag_train
         # Закройте диалоговое окно
         self.accept()
 
@@ -70,67 +91,95 @@ class ButtonInfoDialog(QDialog):
 
 class DraggableButton(QPushButton):
     def __init__(self, parent=None, simple=None, line_index=None, time_now=None, pixel_time_mapping=None):
-        #Добавить сюда вот parent.scroll_area.widget().layout()
+        # Добавить сюда вот parent.scroll_area.widget().layout()
         super().__init__(parent.scroll_content)  # Устанавливаем виджет-родитель
         self.my_parent = parent
         self.pixel_time_mapping = pixel_time_mapping
         simples = EventManager.get_simple_events()
         self.simple = simple
+        self.train = 5
+        self.train_flag = True
         self.duration = simples[simple]["Time"]
         self.description = simples[simple]["Description"]
         self.load_constants_from_json()
         self.setMouseTracking(True)
         self.start_my_time = ""
         self.end_my_time = ""
-        # test
-        self.label = QLabel(parent.scroll_content)  # Создаем QLabel с родительским виджетом
-        self.label.setAlignment(Qt.AlignCenter)  # Устанавливаем выравнивание текста по центру
-        self.show_text_above("")
+
+        self.time_label = QLabel(parent.scroll_content)  # Создаем QLabel с родительским виджетом
+        self.time_label.setAlignment(Qt.AlignCenter)  # Устанавливаем выравнивание текста по центру
+        self.show_time_label("")
+
+        self.train_label = QLabel(parent.scroll_content)  # Создаем QLabel с родительским виджетом
+        self.train_label.setAlignment(Qt.AlignCenter)  # Устанавливаем выравнивание текста по центру
+
 
         self.line_index = line_index
+
         if self.line_index is not None:
             self.move(self.x(), self.get_middle_y_coordinate_line(self.my_parent.horizontal_lines[line_index]))
 
         if time_now is None:
-            self.setGeometry(0, 0, 150, 50)
             self.start_my_time = datetime.strptime(f"{start_time_scroll}:00", "%H:%M")
+            self.end_my_time = datetime.strptime(f"{start_time_scroll}:{self.duration}", "%H:%M")
+            self.get_coordinates_by_time(self.start_my_time, self.end_my_time)
         else:
             self.start_my_time = datetime.strptime(time_now[0], "%H:%M")
             self.end_my_time = datetime.strptime(time_now[1], "%H:%M")
+            time_difference = self.end_my_time - self.start_my_time
+            self.duration = int(time_difference.total_seconds() / 60)
             self.get_coordinates_by_time(self.start_my_time, self.end_my_time)
 
         self.setIcon(QIcon(simples[simple]["Image"]))
-        self.setIconSize(QSize(50, 50))
+        self.setIconSize(self.size())  # Установите размер иконки равным размеру кнопки
         self.dragging = False
         self.offset = None
         # self.horizontal_lines = horizontal_lines
         self.setWindowFlags(Qt.WindowStaysOnTopHint)
         # self.event_time_minutes = event_time_minutes
+        self.show_train_label()
 
-    def show_text_above(self, text):
+    def show_time_label(self, text):
         # Устанавливаем текст и позицию QLabel рядом с кнопкой
-        label_width = self.label.width()
-        label_height = self.label.height()
+        label_width = self.time_label.width()
+        label_height = self.time_label.height()
         button_x = self.geometry().x()
         button_y = self.geometry().y()
         label_x = button_x  # 5 - отступ между кнопкой и текстом
         label_y = button_y - 40  # Центрируем текст по вертикали относительно кнопки
-        self.label.setGeometry(label_x, label_y, label_width, label_height)
+        self.time_label.setGeometry(label_x, label_y, label_width, label_height)
         try:
-            self.label.setText(text[0].strftime("%H:%M"))
+            self.time_label.setText(text[0].strftime("%H:%M"))
         except Exception:
-            self.label.setText("-")
+            self.time_label.setText("-")
 
-        self.label.show()
+        self.time_label.show()
 
-    def show_text(self, text):
-        # Устанавливаем текст и отображаем QLabel
-        self.label.setText(text)
-        self.label.show()
+    def show_train_label(self):
+        if self.train_flag:
+            button_x = self.geometry().x()
+            button_y = self.geometry().y()
+            label_x = button_x - 5  # 5 - отступ между кнопкой и текстом
+            label_y = button_y - 40  # Центрируем текст по вертикали относительно кнопки
+            self.train_label.setGeometry(label_x, label_y, 10, 40)
+            try:
+                self.train_label.setText(str(self.train))
+            except Exception:
+                self.train_label.setText("-")
 
-    def hide_text(self):
+            self.train_label.show()
+        else:
+            self.train_label.setText("")
+            self.hide_train_label()
+
+    def hide_train_label(self):
         # Скрываем QLabel
-        self.label.hide()
+        self.time_label.hide()
+        self.time_label.setText("")
+
+    def hide_time_label(self):
+        # Скрываем QLabel
+        self.time_label.hide()
 
     def open_info_dialog(self):
         dialog = ButtonInfoDialog(self)
@@ -139,9 +188,11 @@ class DraggableButton(QPushButton):
             pass
 
     def refresh_line(self):
+
         if (self.line_index != -1):
-            middle_y = self.my_parent.horizontal_lines[self.line_index].geometry().center().y()
+            middle_y = self.my_parent.horizontal_lines[self.line_index].geometry().center().y() - self.height() // 2
             self.move(self.x(), middle_y)
+        self.show_train_label()
 
     def get_middle_y_coordinate_line(self, line):
         middle_y = line.geometry().center().y()
@@ -209,8 +260,6 @@ class DraggableButton(QPushButton):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.RightButton:
-            self.dragging = True
-            self.offset = event.pos()
             self.open_info_dialog()
         if event.button() == Qt.LeftButton:
             self.dragging = True
@@ -235,13 +284,13 @@ class DraggableButton(QPushButton):
             print(f"Ошибка при загрузке констант из JSON: {e}")
 
     def mouseMoveEvent(self, event):
-
+        self.show_train_label()
         if self.dragging:
-            self.show_text_above(self.get_coordinate())
+            self.show_time_label(self.get_coordinate())
             new_pos = self.mapToParent(event.pos() - self.offset)
             for index, line in enumerate(self.my_parent.horizontal_lines):
                 if line.geometry().contains(new_pos):
-                    new_pos.setY(int(line.geometry().center().y()))
+                    new_pos.setY(int(line.geometry().center().y() - self.height() // 2))
                     self.line_index = index
                     print(index)
                     self.my_line = index
@@ -253,4 +302,4 @@ class DraggableButton(QPushButton):
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.dragging = False
-            self.hide_text()
+            self.hide_time_label()

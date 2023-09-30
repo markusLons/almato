@@ -418,7 +418,6 @@ class RailroadStationApp(QMainWindow):
 
     def get_widget(self, simple):
         button = DraggableButton(parent=self, simple=simple)
-        button.setGeometry(0, 0, 150, 50)
         button.show()
         self.buttons.append(button)
 
