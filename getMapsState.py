@@ -4,6 +4,8 @@ import json
 import mysql.connector
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QListWidget, QTextEdit, QPushButton, QMessageBox
 
+from report_for_Tonya import ReportWindow
+
 # Глобальная переменная с ID пользователя
 USER_ID = "1"  # Замените на нужный вам ID пользователя
 
@@ -58,11 +60,18 @@ class MapsWindow(QWidget):
         self.load_button.clicked.connect(self.load_map_data_and_run_main)
         self.map_info_layout.addWidget(self.load_button)
 
+        self.report_button = QPushButton('ЦЗТ')
+        self.report_button.clicked.connect(self.open_report_window)
+        self.map_info_layout.addWidget(self.report_button)
+
         layout.addLayout(self.map_info_layout)
 
         self.load_map_list()
 
         self.setLayout(layout)
+
+    def open_report_window(self):
+        subprocess.run(["python", "report_for_Tonya.py"])
 
     def load_map_list(self):
         try:
@@ -87,7 +96,6 @@ class MapsWindow(QWidget):
 
     def load_map_data(self, item):
         map_id = item.text().split(':')[0]
-
         try:
             with open('db_config.json', 'r') as config_file:
                 config = json.load(config_file)
