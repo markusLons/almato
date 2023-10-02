@@ -108,6 +108,7 @@ class DraggableButton(QPushButton):
         start_time_scroll = self.my_parent.start_time
         end_time_scroll = self.my_parent.end_time
 
+        self.setFixedHeight(49)  # Устанавливает высоту кнопки равной 50 пикселям
 
         self.time_label = QLabel(parent.scroll_content)  # Создаем QLabel с родительским виджетом
         self.time_label.setAlignment(Qt.AlignCenter)  # Устанавливаем выравнивание текста по центру
