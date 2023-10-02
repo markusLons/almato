@@ -53,7 +53,7 @@ class LoginWindow(QWidget):
 
         # Загрузка данных для подключения из JSON файла
         try:
-            with open('db_config.json', 'r') as config_file:
+            with open('configs/db_config.json', 'r') as config_file:
                 config = json.load(config_file)
         except FileNotFoundError:
             QMessageBox.critical(self, 'Ошибка', 'Файл конфигурации базы данных не найден.')

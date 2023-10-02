@@ -22,7 +22,7 @@ pixel_time_mapping = {}
 def load_map_data_from_sql(item):
     map_info={}
     try:
-        with open('db_config.json', 'r') as config_file:
+        with open('configs/db_config.json', 'r') as config_file:
             config = json.load(config_file)
 
         connection = mysql.connector.connect(**config)
@@ -58,9 +58,8 @@ class RailroadStationApp(QMainWindow):
             self.user_id = data["user_id"]
 
             data = json.loads(data["data"])
-            global start_time, end_time
-            start_time = data["start_time"]
-            end_time = data["end_time"]
+            self.start_time = data["start_time"]
+            self.end_time = data["end_time"]
 
         self.load_constants_from_json()
         self.setWindowTitle("Железнодорожная станция")
@@ -77,7 +76,7 @@ class RailroadStationApp(QMainWindow):
     def load_constants_from_json(self):
         try:
             # Открываем файл mapConstant.json и читаем константы
-            with open('mapConstant.json', 'r') as json_file:
+            with open('configs/mapConstant.json', 'r') as json_file:
                 constants = json.load(json_file)
 
             # Задаем значения константам
@@ -192,27 +191,20 @@ class RailroadStationApp(QMainWindow):
 
         state['buttons'] = buttons_info  # Добавляем информацию о кнопках в состояние
         state['num_lines'] = self.num_lines  # Добавляем количество полос
-        state["start_time"] = start_time
-        state["end_time"] = end_time
+        state["start_time"] = self.start_time
+        state["end_time"] = self.end_time
 
         json_state = json.dumps(state, indent=4, ensure_ascii=False)
 
         # Теперь вы можете использовать json_state как строку или сохранить ее в переменной
         print("Состояние успешно сохранено:")
         print(json_state)
-        # Теперь можно сохранить состояние в файл JSON
-        try:
-            with open('state.json', 'w') as file:
-                json.dump(state, file, indent=4, ensure_ascii=False)
-                print("Состояние успешно сохранено в файл 'state.json'")
-        except Exception as e:
-            print(f"Ошибка при сохранении состояния: {e}")
         return json_state
 
     def save_state(self):
 
         # Создаем подключение к базе данных из файла конфигурации
-        with open('db_config.json', 'r') as config_file:
+        with open('configs/db_config.json', 'r') as config_file:
             config = json.load(config_file)
 
         connection = None  # Инициализируем переменные connection и cursor
@@ -347,7 +339,7 @@ class RailroadStationApp(QMainWindow):
 
         simples = EventManager.get_simple_events()
         for simple in simples:
-            image_path = simples[simple]["Image"]
+            image_path = "textures/" + simples[simple]["Image"]
             action_button = QAction(QIcon(image_path), simple, self)
             self.tool_bar.addAction(action_button)
             action_button.triggered.connect(
@@ -380,14 +372,14 @@ class RailroadStationApp(QMainWindow):
     def createTimeScaleLayout(self):
         time_scale_layout = QHBoxLayout()
 
-        for hour in range(start_time, end_time + 1):
+        for hour in range(self.start_time, self.end_time + 1):
             for minute in range(0, 60, interval):
                 time_label = QLabel(f"{hour:02d}:{minute:02d}")
                 time_label.setFixedSize(50, 50)
                 time_scale_layout.addWidget(time_label)
 
                 # Вычисляем пиксель, соответствующий данному времени
-                pixel = int(((hour - start_time) * 60 + minute) * maxPixelsScroll / ((end_time - start_time) * 60))
+                pixel = int(((hour - self.start_time) * 60 + minute) * maxPixelsScroll / ((self.end_time - self.start_time) * 60))
 
                 # Добавляем соответствие пикселя времени в словарь
                 self.pixel_time_mapping[pixel] = datetime.strptime(f"{hour:02d}:{minute:02d}", "%H:%M")
@@ -398,7 +390,7 @@ class RailroadStationApp(QMainWindow):
                     line.setFrameShadow(QFrame.Sunken)
                     line.setLineWidth(1)
                     time_scale_layout.addWidget(line)
-            if hour < end_time:
+            if hour < self.end_time:
                 line = QFrame(self.scroll_content)
                 line.setFrameShape(QFrame.VLine)
                 line.setFrameShadow(QFrame.Sunken)

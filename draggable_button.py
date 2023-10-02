@@ -105,6 +105,9 @@ class DraggableButton(QPushButton):
         self.setMouseTracking(True)
         self.start_my_time = ""
         self.end_my_time = ""
+        start_time_scroll = self.my_parent.start_time
+        end_time_scroll = self.my_parent.end_time
+
 
         self.time_label = QLabel(parent.scroll_content)  # Создаем QLabel с родительским виджетом
         self.time_label.setAlignment(Qt.AlignCenter)  # Устанавливаем выравнивание текста по центру
@@ -121,7 +124,7 @@ class DraggableButton(QPushButton):
 
         if time_now is None:
             self.start_my_time = datetime.strptime(f"{start_time_scroll}:00", "%H:%M")
-            self.end_my_time = datetime.strptime(f"{start_time_scroll}:{self.duration}", "%H:%M")
+            self.end_my_time = datetime.strptime(f"{end_time_scroll}:{self.duration}", "%H:%M")
             self.get_coordinates_by_time(self.start_my_time, self.end_my_time)
         else:
             self.start_my_time = datetime.strptime(time_now[0], "%H:%M")
@@ -256,7 +259,7 @@ class DraggableButton(QPushButton):
 
             start_time_button = int((current_x - start_dict) // pixels_on_min)
             end_time_button = int((current_x - start_dict + button_width) // pixels_on_min)
-
+            global start_time_scroll
             start_time_scroll = self.my_parent.pixel_time_mapping[start_dict]
             start_time_global = start_time_scroll + timedelta(minutes=start_time_button)
             end_time_global = start_time_scroll + timedelta(minutes=end_time_button)
@@ -275,15 +278,11 @@ class DraggableButton(QPushButton):
     def load_constants_from_json(self):
         try:
             # Открываем файл mapConstant.json и читаем константы
-            with open('mapConstant.json', 'r') as json_file:
+            with open('configs/mapConstant.json', 'r') as json_file:
                 constants = json.load(json_file)
 
             # Задаем значения константам
-            global user_id, map_id, start_time_scroll, end_time_scroll, interval, maxPixelsScroll
-            user_id = constants["user_id"]
-            map_id = constants["map_id"]
-            start_time_scroll = constants["start_time"]
-            end_time_scroll = constants["end_time"]
+            global interval, maxPixelsScroll
             interval = constants["interval"]
             maxPixelsScroll = constants["maxPixelsScroll"]
 

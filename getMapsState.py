@@ -75,7 +75,7 @@ class MapsWindow(QWidget):
 
     def load_map_list(self):
         try:
-            with open('db_config.json', 'r') as config_file:
+            with open('configs/db_config.json', 'r') as config_file:
                 config = json.load(config_file)
 
             connection = mysql.connector.connect(**config)
@@ -97,7 +97,7 @@ class MapsWindow(QWidget):
     def load_map_data(self, item):
         map_id = item.text().split(':')[0]
         try:
-            with open('db_config.json', 'r') as config_file:
+            with open('configs/db_config.json', 'r') as config_file:
                 config = json.load(config_file)
 
             connection = mysql.connector.connect(**config)
@@ -124,7 +124,7 @@ class MapsWindow(QWidget):
         map_id = self.map_list.currentItem().text().split(':')[0]
 
         try:
-            with open('db_config.json', 'r') as config_file:
+            with open('configs/db_config.json', 'r') as config_file:
                 config = json.load(config_file)
 
             connection = mysql.connector.connect(**config)
