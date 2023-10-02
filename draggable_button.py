@@ -125,7 +125,7 @@ class DraggableButton(QPushButton):
 
         if time_now is None:
             self.start_my_time = datetime.strptime(f"{start_time_scroll}:00", "%H:%M")
-            self.end_my_time = datetime.strptime(f"{end_time_scroll}:{self.duration}", "%H:%M")
+            self.end_my_time = datetime.strptime(f"{start_time_scroll}:00", "%H:%M") + timedelta(minutes=self.duration)
             self.get_coordinates_by_time(self.start_my_time, self.end_my_time)
         else:
             self.start_my_time = datetime.strptime(time_now[0], "%H:%M")
