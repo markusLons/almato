@@ -380,6 +380,7 @@ class RailroadStationApp(QMainWindow):
         self.library_combo = QComboBox()
         self.tool_bar.addWidget(self.library_combo)
 
+
         # Добавьте элементы в QComboBox
         self.library_combo.addItem("main.json")
         self.library_combo.addItem("round_1.json")
