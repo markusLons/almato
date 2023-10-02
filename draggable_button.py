@@ -134,6 +134,10 @@ class DraggableButton(QPushButton):
         self.setIconSize(self.size())  # Установите размер иконки равным размеру кнопки
         self.dragging = False
         self.offset = None
+        self.error = False
+        if self.error:
+            self.setStyleSheet("background-color: red;")
+
         # self.horizontal_lines = horizontal_lines
         self.setWindowFlags(Qt.WindowStaysOnTopHint)
         # self.event_time_minutes = event_time_minutes
@@ -221,7 +225,7 @@ class DraggableButton(QPushButton):
             end_pixel = ((end_time - start_time).total_seconds() // 60) * pixels_on_min + start_pixel
 
             button_width = int(self.duration) * pixels_on_min
-            self.setGeometry(start_pixel + self.width() // 2, self.geometry().y(), button_width, self.height())
+            self.setGeometry(int(start_pixel + self.width() // 2), int(self.geometry().y()), int(button_width), int(self.height()))
 
         except Exception as e:
             print(f"Ошибка при вычислении координат: {e}")
@@ -303,3 +307,4 @@ class DraggableButton(QPushButton):
         if event.button() == Qt.LeftButton:
             self.dragging = False
             self.hide_time_label()
+            self.start_my_time, self.end_my_time = self.get_coordinate()

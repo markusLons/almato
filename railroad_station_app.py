@@ -423,15 +423,15 @@ class RailroadStationApp(QMainWindow):
 
 
 def main(id):
-    print(id)
     app = QApplication(sys.argv)
     window = RailroadStationApp()
     data = load_map_data_from_sql(id)
-    print(data)
     data = json.loads(data["data"])
     window.load_state_from_data(data)
 
     window.show()
     sys.exit(app.exec_())
 
+if __name__ == "__main__":
+    main(1)
 
