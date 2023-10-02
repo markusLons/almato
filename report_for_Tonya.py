@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QMenuBar, QMenu, QTableWidget, QTableWidgetItem
-from PyQt5.QtGui import QPalette, QColor
+from PyQt5.QtGui import QPalette, QColor, QIcon
 import sys
 
 
@@ -7,10 +7,13 @@ class ReportWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Отчет')
+
         self.setGeometry(100, 100, 900, 700)
 
         # Устанавливаем стиль приложения
         self.setApplicationStyle()
+
+
 
         # Create menu bar
         menubar = self.createMenuBar()
@@ -27,7 +30,7 @@ class ReportWindow(QMainWindow):
         menubar = QMenuBar(self)
 
         # Apply style sheet to change menu background and text color
-        menubar.setStyleSheet("background-color: rgb(0, 0, 100); color: white; font-size: 19px;")
+        menubar.setStyleSheet("background-color: rgb(255, 89, 13); color: white; font-size: 19px;")
 
         # Optionally, you can also set the font
         font = menubar.font()
@@ -37,6 +40,7 @@ class ReportWindow(QMainWindow):
         return menubar
 
     def setApplicationStyle(self):
+
         dark_palette = QPalette()
         dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
         dark_palette.setColor(QPalette.WindowText, QColor(255, 255, 255))
@@ -91,6 +95,8 @@ class ReportWindow(QMainWindow):
 def main():
     app = QApplication(sys.argv)
     report_window = ReportWindow()
+    icon = QIcon("Икона.jpg")
+    app.setWindowIcon(icon)
     report_window.show()
     sys.exit(app.exec_())
 

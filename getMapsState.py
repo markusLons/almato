@@ -269,7 +269,9 @@ class MapsWindow(QWidget):
             self.create_map_button.clicked.connect(self.create_map)
             layout.addWidget(self.create_map_button)
 
-
+            self.report_button = QPushButton('ЦЗТ')
+            self.report_button.clicked.connect(self.open_report_window)
+            self.map_info_layout.addWidget(self.report_button) # убрать
 
         # Загрузка списков карт
         self.load_map_list()
