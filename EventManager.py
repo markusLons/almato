@@ -8,8 +8,8 @@ class TimeManager:
 
 import json
 
-def get_simple_events():
-    with open('configs/main.json', 'r', encoding='utf-8') as config_file:
+def get_simple_events(path):
+    with open(path, 'r', encoding='utf-8') as config_file:
         config_data = json.load(config_file)
 
     if 'TimeManager' in config_data:

@@ -1,0 +1,16 @@
+{
+    "TimeManager": {
+        "event_templates": {
+            "Прибытие": {
+                "Time": 6,
+                "Image": "Прибытие.jpg",
+                "Description": ""
+            },
+            "Отправление": {
+                "Time": 6,
+                "Image": "Отправление.jpg",
+                "Description": ""
+            }
+        }
+    }
+}

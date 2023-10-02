@@ -9,6 +9,8 @@ from PyQt5.QtWidgets import (
     QHBoxLayout, QLabel, QFrame, QSpacerItem, QSizePolicy, QInputDialog, QMenu,
     QMessageBox, QApplication,
 )
+
+from PyQt5.QtWidgets import QComboBox
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QIcon
 from datetime import datetime
@@ -337,7 +339,21 @@ class RailroadStationApp(QMainWindow):
         self.tool_bar = QToolBar()
         self.addToolBar(Qt.LeftToolBarArea, self.tool_bar)
 
-        simples = EventManager.get_simple_events()
+        # Создайте QComboBox для выбора библиотеки
+        self.library_combo = QComboBox()
+        self.tool_bar.addWidget(self.library_combo)
+
+        # Добавьте элементы в QComboBox
+        self.library_combo.addItem("main.json")
+        self.library_combo.addItem("round_1.json")
+
+        # Обработчик события изменения выбранной библиотеки
+        self.library_combo.currentIndexChanged.connect(self.library_changed)
+
+        # Инициализируйте первоначальную выбранную библиотеку
+        self.current_library = "main.json"
+
+        simples = EventManager.get_simple_events('configs/main.json')
         for simple in simples:
             image_path = "textures/" + simples[simple]["Image"]
             action_button = QAction(QIcon(image_path), simple, self)
@@ -346,6 +362,51 @@ class RailroadStationApp(QMainWindow):
                 lambda _, simple=simple: self.get_widget(simple))
 
         # Add this line to initialize self.horizontal_lines
+        self.horizontal_lines = []
+
+    def library_changed(self, index):
+        # Обработчик изменения выбранной библиотеки
+        library = self.library_combo.currentText()
+        if library != self.current_library:
+            self.current_library = library
+            self.update_toolbar_icons()
+
+    def update_toolbar_icons(self):
+        # Обновите иконки на панели инструментов на основе текущей выбранной библиотеки
+        self.tool_bar.clear()
+        self.addToolBar(Qt.LeftToolBarArea, self.tool_bar)
+
+        # Создайте QComboBox для выбора библиотеки
+        self.library_combo = QComboBox()
+        self.tool_bar.addWidget(self.library_combo)
+
+        # Добавьте элементы в QComboBox
+        self.library_combo.addItem("main.json")
+        self.library_combo.addItem("round_1.json")
+
+        # Обработчик события изменения выбранной библиотеки
+        self.library_combo.currentIndexChanged.connect(self.library_changed)
+
+        simples = EventManager.get_simple_events(f'configs/{self.current_library}')
+        for simple in simples:
+            image_path = "textures/" + simples[simple]["Image"]
+            action_button = QAction(QIcon(image_path), simple, self)
+            self.tool_bar.addAction(action_button)
+            action_button.triggered.connect(
+                lambda _, simple=simple: self.get_widget(simple))
+
+    def updateToolBar(self):
+        self.tool_bar.clear()
+
+        current_library = self.library_combo_box.currentText()
+
+        simples = EventManager.get_simple_events(f'configs/{current_library}')
+        for simple in simples:
+            image_path = f"textures/{simples[simple]['Image']}"
+            action_button = QAction(QIcon(image_path), simple, self)
+            self.tool_bar.addAction(action_button)
+            action_button.triggered.connect(lambda _, simple=simple: self.get_widget(simple))
+
         self.horizontal_lines = []
     def createScrollArea(self):
         self.scroll_area = QScrollArea(self)

@@ -90,12 +90,12 @@ class ButtonInfoDialog(QDialog):
 
 
 class DraggableButton(QPushButton):
-    def __init__(self, parent=None, simple=None, line_index=None, time_now=None, pixel_time_mapping=None):
+    def __init__(self, path = 'configs/main.json', parent=None, simple=None, line_index=None, time_now=None, pixel_time_mapping=None):
         # Добавить сюда вот parent.scroll_area.widget().layout()
         super().__init__(parent.scroll_content)  # Устанавливаем виджет-родитель
         self.my_parent = parent
         self.pixel_time_mapping = pixel_time_mapping
-        simples = EventManager.get_simple_events()
+        simples = EventManager.get_simple_events(path)
         self.simple = simple
         self.train = 5
         self.train_flag = True
