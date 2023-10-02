@@ -29,7 +29,7 @@ def load_map_data_from_sql(item):
         cursor = connection.cursor()
 
         # Загрузка данных о выбранной карте
-        query = "SELECT name, map_data, comment, data_create, data_edit FROM maps WHERE map_id = %s"
+        query = "SELECT name, map_data, comment, data_create, data_edit, user_id FROM maps WHERE map_id = %s"
         cursor.execute(query, (item,))
         map_data = cursor.fetchone()
 
@@ -37,6 +37,7 @@ def load_map_data_from_sql(item):
             map_info["name"] = map_data[0]
             map_info["data"] = map_data[1].decode('utf-8')
             map_info["comment"] = map_data[2].decode('utf-8')
+            map_info["user_id"] = map_data[5]
 
         cursor.close()
         connection.close()
@@ -47,9 +48,20 @@ def load_map_data_from_sql(item):
 
 
 class RailroadStationApp(QMainWindow):
-    def __init__(self):
+    def __init__(self, id = 1): #TODO убрать этот костыль
         self.pixel_time_mapping = {}
         super().__init__()
+        self.data = ""
+        self.map_id = id
+        if id is not None:
+            data = load_map_data_from_sql(id)
+            self.user_id = data["user_id"]
+
+            data = json.loads(data["data"])
+            global start_time, end_time
+            start_time = data["start_time"]
+            end_time = data["end_time"]
+
         self.load_constants_from_json()
         self.setWindowTitle("Железнодорожная станция")
         self.setGeometry(100, 100, 800, 600)
@@ -61,6 +73,7 @@ class RailroadStationApp(QMainWindow):
         self.num_lines = 0
         self.horizontal_lines = []
         self.initUI()
+        self.load_state_from_data(data)
     def load_constants_from_json(self):
         try:
             # Открываем файл mapConstant.json и читаем константы
@@ -68,11 +81,7 @@ class RailroadStationApp(QMainWindow):
                 constants = json.load(json_file)
 
             # Задаем значения константам
-            global user_id, map_id, start_time, end_time, interval, maxPixelsScroll
-            user_id = constants["user_id"]
-            map_id = constants["map_id"]
-            start_time = constants["start_time"]
-            end_time = constants["end_time"]
+            global interval, maxPixelsScroll
             interval = constants["interval"]
             maxPixelsScroll = constants["maxPixelsScroll"]
 
@@ -213,7 +222,7 @@ class RailroadStationApp(QMainWindow):
             connection = mysql.connector.connect(**config, connect_timeout=60)
             cursor = connection.cursor()
 
-            if map_id == -1:
+            if self.map_id == -1:
                 # Создаем новую карту
                 map_data = self.get_map_data()  # Преобразуем состояние в JSON-строку
                 data_create = datetime.now()
@@ -221,13 +230,13 @@ class RailroadStationApp(QMainWindow):
                 name = "Новая карта"  # Имя новой карты
                 cursor.execute("INSERT INTO maps (user_id, map_data, comment, name, data_create, data_edit) "
                                "VALUES (%s, %s, %s, %s, %s, %s)",
-                               (user_id, map_data, "", name, data_create, data_edit))
+                               (self.user_id, map_data, "", name, data_create, data_edit))
             else:
                 # Обновляем существующую карту
                 map_data = self.get_map_data()  # Преобразуем состояние в JSON-строку
                 data_edit = datetime.now()
                 cursor.execute("UPDATE maps SET map_data = %s, data_edit = %s WHERE map_id = %s",
-                               (map_data, data_edit, map_id))
+                               (map_data, data_edit, self.map_id))
 
             # Сохраняем изменения
             connection.commit()
@@ -427,10 +436,6 @@ class RailroadStationApp(QMainWindow):
 def main(id):
     app = QApplication(sys.argv)
     window = RailroadStationApp()
-    data = load_map_data_from_sql(id)
-    data = json.loads(data["data"])
-    window.load_state_from_data(data)
-
     window.show()
     sys.exit(app.exec_())
 
