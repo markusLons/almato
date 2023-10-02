@@ -2,7 +2,8 @@ import subprocess
 import sys
 import json
 import mysql.connector
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QListWidget, QTextEdit, QPushButton, QMessageBox, QTabWidget
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QListWidget, QTextEdit, \
+    QPushButton, QMessageBox, QTabWidget, QTimeEdit
 
 from report_for_Tonya import ReportWindow
 
@@ -14,9 +15,9 @@ from PyQt5.QtWidgets import QDialog, QLabel, QTextEdit, QPushButton
 from PyQt5.QtWidgets import QDialog, QLabel, QLineEdit, QComboBox, QSpinBox, QPushButton, QVBoxLayout
 
 class CreateMapDialog(QDialog):
-    def __init__(self):
+    def __init__(self, parent):
         super().__init__()
-
+        self.my_parent = parent
         self.setWindowTitle('Создать новую карту')
 
         # Создайте элементы интерфейса для ввода данных о новой карте
@@ -35,6 +36,12 @@ class CreateMapDialog(QDialog):
         self.number_of_tracks_spinbox.setMinimum(1)  # Установите минимальное значение
         self.number_of_tracks_spinbox.setMaximum(100)  # Установите максимальное значение
 
+        self.start_time_label = QLabel('Начало времени:')  # Новый пункт - Начало времени
+        self.start_time_input = QTimeEdit()
+
+        self.end_time_label = QLabel('Конец времени:')  # Новый пункт - Конец времени
+        self.end_time_input = QTimeEdit()
+
         self.create_button = QPushButton('Создать')
         self.create_button.clicked.connect(self.create_map)
 
@@ -48,8 +55,49 @@ class CreateMapDialog(QDialog):
         layout.addWidget(self.station_type_combobox)
         layout.addWidget(self.number_of_tracks_label)
         layout.addWidget(self.number_of_tracks_spinbox)
+        layout.addWidget(self.start_time_label)  # Добавляем начало времени
+        layout.addWidget(self.start_time_input)
+        layout.addWidget(self.end_time_label)  # Добавляем конец времени
+        layout.addWidget(self.end_time_input)
         layout.addWidget(self.create_button)
         self.setLayout(layout)
+
+    def send_map_on_SQL(self, map_name, map_comment, map_station_type, map_number_of_tracks, start_time, end_time):
+        with open('configs/db_config.json', 'r') as config_file:
+            config = json.load(config_file)
+
+        connection = mysql.connector.connect(**config)
+        cursor = connection.cursor()
+        start_time = int(self.start_time_input.time().toString("hh"))  # Получаем часы начала времени
+        end_time = int(self.end_time_input.time().toString("hh"))  #
+        map_data = json.dumps({
+            "buttons": [],
+            "num_lines": map_number_of_tracks,
+            "start_time": start_time,
+            "end_time": end_time
+        })
+
+        # Используйте параметризованный запрос, чтобы избежать SQL-инъекций
+        query = """
+        INSERT INTO maps 
+        (user_id, map_data, comment, name) 
+        VALUES 
+        (%s, %s, %s, %s)
+        """
+
+        # Значения для параметризованного запроса
+        values = (USER_ID, map_data, map_comment, map_name)
+
+        try:
+            cursor.execute(query, values)
+            connection.commit()
+            print("Запись успешно добавлена в базу данных")
+        except Exception as e:
+            print(f"Ошибка при добавлении записи в базу данных: {e}")
+        finally:
+            cursor.close()
+            connection.close()
+        self.my_parent.update_map_list()
 
     def create_map(self):
         # Получите значения, введенные пользователем
@@ -58,8 +106,15 @@ class CreateMapDialog(QDialog):
         new_map_station_type = self.station_type_combobox.currentText()
         new_map_number_of_tracks = self.number_of_tracks_spinbox.value()
 
-        # Выполните SQL-запрос для вставки новой карты в базу данных, как описано в предыдущем ответе
+        start_time = self.start_time_input.time().toString("hh:mm:ss")  # Получаем начало времени
+        end_time = self.end_time_input.time().toString("hh:mm:ss")  # Получаем конец времени
 
+        # Выполните SQL-запрос для вставки новой карты в базу данных, как описано в предыдущем ответе
+        # Включите значения начала и конца времени в ваш SQL-запрос
+        self.send_map_on_SQL(map_name=new_map_name, map_comment=new_map_comment,
+                             map_number_of_tracks=new_map_number_of_tracks,
+                             start_time=start_time, end_time=end_time,
+                             map_station_type=new_map_station_type)
         # Закройте диалоговое окно после создания карты
         self.accept()
 
@@ -376,13 +431,18 @@ class MapsWindow(QWidget):
 
     def create_map(self):
         # Создайте экземпляр диалогового окна для создания новой карты
-        create_map_dialog = CreateMapDialog()
+        create_map_dialog = CreateMapDialog(self)
 
         # Откройте диалоговое окно
         if create_map_dialog.exec_() == QDialog.Accepted:
             # Обновите список карт на текущей вкладке
             self.load_map_list()
+    def update_map_list(self):
+        # Очистите список карт
+        self.my_map_list.clear()
 
+        # После этого вызовите функцию для загрузки списка карт заново
+        self.load_map_list()
     def create_competition(self):
         # Добавьте здесь код для создания нового соревнования
         pass
