@@ -66,7 +66,7 @@ class ButtonInfoDialog(QDialog):
         new_train = self.number_train.text()
 
         # Обновите параметры кнопки
-        if new_start_time != self.start_time_edit.text() or self.description_edit.text() != new_description:
+        if str(self.button.start_my_time.strftime("%H:%M")) or self.button.description != new_description:
             self.button.train = new_train
             self.button.duration = int(new_duration)
             self.button.description = new_description
