@@ -171,18 +171,20 @@ class RailroadStationApp(QMainWindow):
         buttons_info = []
 
         for i, button in enumerate(self.buttons):
-            start_time, end_time = button.get_coordinate()
+            start_time_button, end_time_button = button.get_coordinate()
             button_info = {
                 'index': i,  # Порядковый номер кнопки
                 'name': button.simple,  # Название кнопки (предполагается, что текст кнопки содержит имя)
-                'start_time': start_time.strftime("%H:%M"),  # Время начала
-                'end_time': end_time.strftime("%H:%M"),  # Время окончания
+                'start_time': start_time_button.strftime("%H:%M"),  # Время начала
+                'end_time': end_time_button.strftime("%H:%M"),  # Время окончания
                 'line_index': button.line_index,  # Номер строки, на которой находится кнопка
             }
             buttons_info.append(button_info)
 
         state['buttons'] = buttons_info  # Добавляем информацию о кнопках в состояние
         state['num_lines'] = self.num_lines  # Добавляем количество полос
+        state["start_time"] = start_time
+        state["end_time"] = end_time
 
         json_state = json.dumps(state, indent=4, ensure_ascii=False)
 
