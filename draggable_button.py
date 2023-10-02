@@ -304,7 +304,42 @@ class DraggableButton(QPushButton):
                     break
             else:
                 self.line_index = -1
+
+            for button in self.my_parent.buttons:
+                duration_dt = self.end_my_time - self.start_my_time
+                if self.line_index == button.line_index and button != self:
+                    print(button.simple, (self.start_my_time - button.end_my_time).total_seconds() // 60,
+                          (self.end_my_time - button.start_my_time).total_seconds() // 60)
+
+                    interval_start_to_end = (self.start_my_time - button.end_my_time).total_seconds() // 60
+                    interval_end_to_start = (self.end_my_time - button.start_my_time).total_seconds() // 60
+
+                    if -5 <= interval_start_to_end <= 10:
+                        # Устанавливаем новую позицию для текущей кнопки
+                        new_x = button.geometry().right() + 1
+
+                        new_pos.setX(new_x)
+                    elif -5 <= interval_end_to_start <= 10:
+                        new_x = button.geometry().left() - self.width()
+
+                        # Устанавливаем новую позицию для текущей кнопки
+                        new_pos.setX(new_x)
             self.move(new_pos)
+
+    def nearest_button(self):
+        for button in self.my_parent.buttons:
+            if button != self:
+                left_edge = self.geometry().left()
+                right_edge = self.geometry().right()
+                button_left_edge = button.geometry().left()
+                button_right_edge = button.geometry().right()
+
+                if abs(left_edge - button_right_edge) < 40:
+                    # Притягиваем текущую кнопку к кнопке button справа
+                    self.move(button_right_edge + 1, self.geometry().top())
+                elif abs(right_edge - button_left_edge) < 40:
+                    # Притягиваем текущую кнопку к кнопке button слева
+                    self.move(button_left_edge - self.width() - 1, self.geometry().top())
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
