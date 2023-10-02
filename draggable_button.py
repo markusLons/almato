@@ -130,8 +130,11 @@ class DraggableButton(QPushButton):
             self.duration = int(time_difference.total_seconds() / 60)
             self.get_coordinates_by_time(self.start_my_time, self.end_my_time)
 
-        self.setIcon(QIcon(simples[simple]["Image"]))
-        self.setIconSize(self.size())  # Установите размер иконки равным размеру кнопки
+        image_path = simples[simple]["Image"]
+        self.setStyleSheet(f"QPushButton {{"
+                           f"border-image: url('{image_path}') center center;"
+                           f"}}")
+        #self.setIconSize(self.size())  # Установите размер иконки равным размеру кнопки
         self.dragging = False
         self.offset = None
         self.error = False
