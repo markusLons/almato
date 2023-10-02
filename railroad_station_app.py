@@ -48,7 +48,7 @@ def load_map_data_from_sql(item):
 
 
 class RailroadStationApp(QMainWindow):
-    def __init__(self, id = 1): #TODO убрать этот костыль
+    def __init__(self, id): 
         self.pixel_time_mapping = {}
         super().__init__()
         self.data = ""
@@ -435,7 +435,7 @@ class RailroadStationApp(QMainWindow):
 
 def main(id):
     app = QApplication(sys.argv)
-    window = RailroadStationApp()
+    window = RailroadStationApp(id)
     window.show()
     sys.exit(app.exec_())
 

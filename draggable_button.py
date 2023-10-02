@@ -130,7 +130,7 @@ class DraggableButton(QPushButton):
             self.duration = int(time_difference.total_seconds() / 60)
             self.get_coordinates_by_time(self.start_my_time, self.end_my_time)
 
-        image_path = simples[simple]["Image"]
+        image_path = "textures/" + simples[simple]["Image"]
         self.setStyleSheet(f"QPushButton {{"
                            f"border-image: url('{image_path}') center center;"
                            f"}}")
