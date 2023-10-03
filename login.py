@@ -5,6 +5,8 @@ import mysql.connector
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QMessageBox, QLineEdit
 from PyQt5.QtCore import Qt, pyqtSignal
 
+
+
 class EnterLineEdit(QLineEdit):
     enterPressed = pyqtSignal()
 
