@@ -344,16 +344,16 @@ class RailroadStationApp(QMainWindow):
         self.tool_bar.addWidget(self.library_combo)
 
         # Добавьте элементы в QComboBox
-        self.library_combo.addItem("main.json")
         self.library_combo.addItem("round_1.json")
+        self.library_combo.addItem("round_2.json")
 
         # Обработчик события изменения выбранной библиотеки
         self.library_combo.currentIndexChanged.connect(self.library_changed)
 
         # Инициализируйте первоначальную выбранную библиотеку
-        self.current_library = "main.json"
+        self.current_library = "round_1.json"
 
-        simples = EventManager.get_simple_events('configs/main.json')
+        simples = EventManager.get_simple_events('configs/round_1.json')
         for simple in simples:
             image_path = "textures/" + simples[simple]["Image"]
             action_button = QAction(QIcon(image_path), simple, self)
@@ -382,8 +382,8 @@ class RailroadStationApp(QMainWindow):
 
 
         # Добавьте элементы в QComboBox
-        self.library_combo.addItem("main.json")
         self.library_combo.addItem("round_1.json")
+        self.library_combo.addItem("round_2.json")
 
         # Обработчик события изменения выбранной библиотеки
         self.library_combo.currentIndexChanged.connect(self.library_changed)

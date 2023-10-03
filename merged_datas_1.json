@@ -65,6 +65,21 @@
                 "Time": 14,
                 "Image": "Сокращенная_проба_тормозов.jpg",
                 "Description": ""
+            },
+            "Путь": {
+                "Time": 17,
+                "Image": "Путь.jpg",
+                "Description": ""
+            },
+            "Веселое убытие": {
+                "Time": 17,
+                "Image": "Веселое_убытие.jpeg",
+                "Description": ""
+            },
+            "Уверенность": {
+                "Time": 17,
+                "Image": "Уверенность.jpeg",
+                "Description": ""
             }
         }
     }

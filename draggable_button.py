@@ -1,5 +1,6 @@
 # draggable_button.py
 import json
+import os
 
 from PyQt5.QtCore import QSize, Qt, QRect
 from PyQt5.QtGui import QIcon
@@ -90,11 +91,12 @@ class ButtonInfoDialog(QDialog):
 
 
 class DraggableButton(QPushButton):
-    def __init__(self, path = 'configs/main.json', parent=None, simple=None, line_index=None, time_now=None, pixel_time_mapping=None):
+    def __init__(self, path = 'merged_datas_1.json', parent=None, simple=None, line_index=None, time_now=None, pixel_time_mapping=None):
         # Добавить сюда вот parent.scroll_area.widget().layout()
         super().__init__(parent.scroll_content)  # Устанавливаем виджет-родитель
         self.my_parent = parent
         self.pixel_time_mapping = pixel_time_mapping
+        self.merged_json()
         simples = EventManager.get_simple_events(path)
         self.simple = simple
         self.train = 5
@@ -149,6 +151,38 @@ class DraggableButton(QPushButton):
         self.setWindowFlags(Qt.WindowStaysOnTopHint)
         # self.event_time_minutes = event_time_minutes
         self.show_train_label()
+
+    def merged_json(self):
+        library_path = 'libraries'
+        output_file_path = 'merged_datas_1.json'
+        # Создать пустой словарь для объединенных данных
+        merged_data = {
+            "TimeManager": {
+                "event_templates": {}
+            }
+        }
+
+        # Проход по всем файлам в папке
+        for filename in os.listdir(library_path):
+            if filename.endswith(".json"):
+                file_path = os.path.join(library_path, filename)
+
+                # Открыть JSON-файл и загрузить данные
+                with open(file_path, 'r', encoding='utf-8') as file:
+                    data = json.load(file)
+
+                # Проверить, соответствует ли структура данным в файле
+                if "TimeManager" in data and "event_templates" in data["TimeManager"]:
+                    event_templates = data["TimeManager"]["event_templates"]
+
+                    # Объединить данные из текущего файла в общий словарь
+                    for event_name, event_data in event_templates.items():
+                        merged_data["TimeManager"]["event_templates"][event_name] = event_data
+
+        # Теперь merged_data содержит объединенные данные из всех JSON-файлов
+        # Можете использовать merged_data как ваши данные
+        with open(output_file_path, 'w', encoding='utf-8') as output_file:
+            json.dump(merged_data, output_file, ensure_ascii=False, indent=4)
 
     def show_time_label(self, text):
         # Устанавливаем текст и позицию QLabel рядом с кнопкой

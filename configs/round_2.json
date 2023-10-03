@@ -1,0 +1,31 @@
+{
+    "TimeManager": {
+        "event_templates": {
+            "Прибытие": {
+                "Time": 6,
+                "Image": "Прибытие.jpg",
+                "Description": ""
+            },
+            "Отправление": {
+                "Time": 6,
+                "Image": "Отправление.jpg",
+                "Description": ""
+            },
+            "Путь": {
+                "Time": 17,
+                "Image": "Путь.jpg",
+                "Description": ""
+            },
+            "Веселое убытие": {
+                "Time": 17,
+                "Image": "Веселое_убытие.jpeg",
+                "Description": ""
+            },
+            "Уверенность": {
+                "Time": 17,
+                "Image": "Уверенность.jpeg",
+                "Description": ""
+            }
+        }
+    }
+}
