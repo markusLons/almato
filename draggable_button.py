@@ -293,7 +293,7 @@ class DraggableButton(QPushButton):
                         start_dict]).total_seconds() // 60)
 
             start_time_button = int((current_x - start_dict) // pixels_on_min) - 10  # Отнимаем 10 минут
-            end_time_button = int((current_x - start_dict + button_width) // pixels_on_min)
+            end_time_button = int((current_x - start_dict + button_width) // pixels_on_min) -10
             global start_time_scroll
             start_time_scroll = self.my_parent.pixel_time_mapping[start_dict]
             start_time_global = start_time_scroll + timedelta(minutes=start_time_button)
