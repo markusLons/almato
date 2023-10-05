@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (
     QHBoxLayout, QLabel, QFrame, QSpacerItem, QSizePolicy, QInputDialog, QMenu,
     QMessageBox, QApplication,
 )
-
+from PyQt5.QtWidgets import QLineEdit
 from PyQt5.QtWidgets import QComboBox
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QIcon
@@ -48,7 +48,6 @@ def load_map_data_from_sql(item):
         print(err)
 
 
-
 class RailroadStationApp(QMainWindow):
     def __init__(self, id): 
         self.pixel_time_mapping = {}
@@ -73,6 +72,7 @@ class RailroadStationApp(QMainWindow):
 
         self.num_lines = 0
         self.horizontal_lines = []
+        self.horizontal_line_names = []
         self.initUI()
         self.load_state_from_data(data)
     def load_constants_from_json(self):
@@ -196,6 +196,8 @@ class RailroadStationApp(QMainWindow):
         state["start_time"] = self.start_time
         state["end_time"] = self.end_time
 
+        state["horizontal_line_names"] = self.horizontal_line_names
+
         json_state = json.dumps(state, indent=4, ensure_ascii=False)
 
         # Теперь вы можете использовать json_state как строку или сохранить ее в переменной
@@ -245,12 +247,8 @@ class RailroadStationApp(QMainWindow):
                 connection.close()
 
     def load_state_from_data(self, state_data):
-        #try:
-
-        # Очищаем текущее состояние
         self.clear_current_state()
 
-        # Восстанавливаем состояние из данных
         self.num_lines = state_data.get('num_lines', 0)
         self.horizontal_lines = self.createHorizontalLines()
 
@@ -263,47 +261,69 @@ class RailroadStationApp(QMainWindow):
                                      pixel_time_mapping=pixel_time_mapping,
                                      line_index= int(button_info.get("line_index"))
                                      )
-            #button.setGeometry(0, 0, 150, 50)
             button.show()
             self.buttons.append(button)
-            #self.set_button_position(button, button_info.get('start_time'), button_info.get('line_index'))
 
         self.current_image_path = state_data.get('current_image_path', None)
         QMessageBox.information(self, "Загрузка состояния", "Состояние успешно загружено.")
         for i in self.buttons:
             i.refresh_line()
 
-
-        #except Exception as e:
-            #QMessageBox.warning(self, "Ошибка загрузки", f"Произошла ошибка при загрузке состояния: {str(e)}")
     def add_horizontal_line(self):
-        #if self.horizontal_lines is None:
-        #    self.horizontal_lines = []  # Initialize it if it's None
+
         user_input, ok = QInputDialog.getInt(self, 'Введите количество полос', 'Количество:')
         if ok:
-            self.count_gorisontal_line = user_input
             layout = self.scroll_area.widget().layout()
-            for _ in range(user_input):
+
+            for _ in range(self.num_lines):
+                line_layout = QHBoxLayout()  # Создаем горизонтальный макет для строки
                 line = QPushButton()
                 line.setFixedSize(maxPixelsScroll, 50)
                 self.horizontal_lines.append(line)
-                layout.addWidget(line)
+
+                # Создаем виджет с именем (QLineEdit) и устанавливаем начальное имя
+                name_edit = QLineEdit("Имя полосы")  # Замените "Имя полосы" на фактическое имя
+                name_edit.setFixedSize(100, 30)  # Установите желаемый размер для виджета с именем
+                name_edit.returnPressed.connect(lambda text=name_edit.text(), line=line: self.change_name(text, line))
+
+                line_layout.addWidget(name_edit)  # Добавляем виджет с именем (QLineEdit) в макет строки
+                line_layout.addWidget(line)  # Добавляем горизонтальную полосу в макет строки
+
+                # Добавляем строку в общий макет
+                layout.addLayout(line_layout)
+
                 spacer = QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum)
                 layout.addItem(spacer)
+
             self.scroll_area.widget().setLayout(layout)
-            self.num_lines += user_input  # Обновляем количество полос
+            self.num_lines += user_input
+            self.horizontal_line_names.append("Имя полосы")
+            pass
 
     def add_horizontal_line1(self):
         self.count_gorisontal_line = 1
         layout = self.scroll_area.widget().layout()
+        line_layout = QHBoxLayout()
         line = QPushButton()
         line.setFixedSize(maxPixelsScroll, 50)
         self.horizontal_lines.append(line)
-        layout.addWidget(line)
+
+        name_edit = QLineEdit("Имя полосы")
+        name_edit.setFixedSize(100, 30)
+        name_edit.returnPressed.connect(lambda text=name_edit.text(), line=line: self.change_name(text, line))
+
+        line_layout.addWidget(name_edit)
+        line_layout.addWidget(line)
+
+        layout.addLayout(line_layout)
+
         spacer = QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum)
         layout.addItem(spacer)
-        self.scroll_area.widget().setLayout(layout)
         self.num_lines += 1
+
+        # Добавляем пустую строку в массив имен
+        self.horizontal_line_names.append("Имя полосы")
+
     def remove_horizontal_line_ind(self):
         index, ok = QInputDialog.getInt(self, 'Введите индекс полосы:', 'Индекс:')
         if ok:
@@ -434,14 +454,19 @@ class RailroadStationApp(QMainWindow):
     def createTimeScaleLayout(self):
         time_scale_layout = QHBoxLayout()
 
+        time_label = QLabel("Время")
+        time_label.setFixedSize(100, 50)
+        time_scale_layout.addWidget(time_label)
+
         for hour in range(self.start_time, self.end_time + 1):
             for minute in range(0, 60, interval):
                 time_label = QLabel(f"{hour:02d}:{minute:02d}")
                 time_label.setFixedSize(50, 50)
                 time_scale_layout.addWidget(time_label)
 
+
                 # Вычисляем пиксель, соответствующий данному времени
-                pixel = int(((hour - self.start_time) * 60 + minute) * maxPixelsScroll / ((self.end_time - self.start_time) * 60))
+                pixel = int(((hour - self.start_time) * 60 + minute) * (maxPixelsScroll) / ((self.end_time - self.start_time) * 60))
 
                 # Добавляем соответствие пикселя времени в словарь
                 self.pixel_time_mapping[pixel] = datetime.strptime(f"{hour:02d}:{minute:02d}", "%H:%M")
@@ -457,29 +482,42 @@ class RailroadStationApp(QMainWindow):
                 line.setFrameShape(QFrame.VLine)
                 line.setFrameShadow(QFrame.Sunken)
                 time_scale_layout.addWidget(line)
+                pass
 
         # Возвращаем словарь и макет временной шкалы
         return time_scale_layout
 
     def createHorizontalLines(self):
-        for widget in self.horizontal_lines:
-            widget.setParent(None)
-        self.horizontal_lines.clear()
-        if self.horizontal_lines is None:
-            self.horizontal_lines = []
-
-        self.count_gorisontal_line = self.num_lines
         layout = self.scroll_area.widget().layout()
+
         for _ in range(self.num_lines):
+            line_layout = QHBoxLayout()  # Создаем горизонтальный макет для строки
             line = QPushButton()
             line.setFixedSize(maxPixelsScroll, 50)
             self.horizontal_lines.append(line)
-            pass
-            layout.addWidget(line)
+
+            # Создаем виджет с именем (QLineEdit) и устанавливаем начальное имя
+            name_edit = QLineEdit("Имя полосы")  # Замените "Имя полосы" на фактическое имя
+            self.horizontal_line_names.append("Имя полосы")
+            name_edit.setFixedSize(100, 30)  # Установите желаемый размер для виджета с именем
+            name_edit.returnPressed.connect(lambda text=name_edit.text(), line=line: self.change_name(text, line))
+
+            line_layout.addWidget(name_edit)  # Добавляем виджет с именем (QLineEdit) в макет строки
+            line_layout.addWidget(line)  # Добавляем горизонтальную полосу в макет строки
+
+            # Добавляем строку в общий макет
+            layout.addLayout(line_layout)
+
             spacer = QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum)
             layout.addItem(spacer)
+
         self.scroll_area.widget().setLayout(layout)
         return self.horizontal_lines
+
+    def change_name(self, new_name, line):
+        index = self.horizontal_lines.index(line)
+        self.horizontal_lines[index - 1].setText(new_name)
+        self.horizontal_line_names.append[index-1]=new_name
 
     def get_widget(self, simple):
         button = DraggableButton(parent=self, simple=simple)

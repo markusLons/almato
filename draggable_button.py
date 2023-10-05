@@ -292,7 +292,7 @@ class DraggableButton(QPushButton):
                     (self.my_parent.pixel_time_mapping[ens_dict] - self.my_parent.pixel_time_mapping[
                         start_dict]).total_seconds() // 60)
 
-            start_time_button = int((current_x - start_dict) // pixels_on_min)
+            start_time_button = int((current_x - start_dict) // pixels_on_min) - 10  # Отнимаем 10 минут
             end_time_button = int((current_x - start_dict + button_width) // pixels_on_min)
             global start_time_scroll
             start_time_scroll = self.my_parent.pixel_time_mapping[start_dict]
@@ -358,6 +358,7 @@ class DraggableButton(QPushButton):
 
                         # Устанавливаем новую позицию для текущей кнопки
                         new_pos.setX(new_x)
+
             self.move(new_pos)
 
     def nearest_button(self):
