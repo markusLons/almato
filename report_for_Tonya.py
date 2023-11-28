@@ -1,6 +1,102 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QMenuBar, QMenu, QTableWidget, QTableWidgetItem
+from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QMenuBar, QMenu, QTableWidget, QTableWidgetItem, QMessageBox
 from PyQt5.QtGui import QPalette, QColor, QIcon
 import sys
+import mysql.connector
+USER_ID = "2"  # Замените на нужный вам ID пользователя
+USER_TYPE = 0  # Замените на тип пользователя (0 или 1)
+
+import json
+import pandas as pd
+import numpy as np
+
+class Report:
+    def __init__(self, data, command):
+        self.arrival = 0
+        self.departure = 0
+        self.data = json.loads(data)  # data приходит в формате str
+        self.buttons = self.data['buttons']
+        self.train = self.trains()
+        self.stay_train = self.count_t()
+        self.number_lines = self.data['num_lines']
+        self.time_operation = pd.read_excel('trains.xlsx', index_col=None)
+        self.command = command
+        self.count = 0
+        self.detail = self.details()
+        self.sum = self.summary()
+        self.perfomanc = self.perfomance()
+
+    def trains(self):
+        a = [self.buttons[i]['train_number'] for i in range(len(self.buttons))]
+        a = np.array(a)
+        return np.unique(a)
+
+    def count_t(self):
+        t = 0
+        for tr in self.train:
+            start_time = 0
+            end_time = 0
+            for obj in self.buttons:
+
+                if obj['train_number'] == tr and (
+                        obj['name'].lower().find('прибытие') != -1 or obj['name'].lower().find('прибытия') != -1):
+                    start_time = int(obj['start_time'][:2]) * 60 + int(obj['start_time'][3:5])
+                    break
+            for obj in self.buttons:
+                if obj['train_number'] == tr and obj['name'].lower().find('отправление') != -1:
+                    end_time = int(obj['end_time'][:2]) * 60 + int(obj['end_time'][3:5])
+                    break
+            if end_time != 0:
+                t = t + (end_time - start_time)
+            else:
+                t = t + 24 * 60 - start_time
+        return t
+
+    def summary(self):
+        df = pd.DataFrame({'Команда': [], 'Прибытие поездов': [], 'Отбытие поездов': [], ' ': []})
+        df.loc[0, "Команда"] = self.command
+        for object in self.buttons:
+            if object['name'].lower().find('прибытие') != -1 or object['name'].lower().find('прибытия') != -1:
+                self.arrival += 1
+        df.loc[0, "Прибытие поездов"] = self.arrival
+        df.loc[0, "Отбытие поездов"] = self.departure
+        df.loc[0, " "] = self.arrival + self.departure
+        return df
+
+    def perfomance(self):
+        df = pd.DataFrame({'Номер': [], 'Наименование показателей': [], 'Единица измерения': [], self.command: []})
+        stat = ['Количество поездов принятых на станцию', 'Количество поездов отправленных со станции',
+                'Простой поезда на станции']
+        ed = ['поезд', 'поезд', 'мин.']
+        result = [self.arrival, self.departure, self.stay_train]
+        for i in range(len(ed)):
+            df.loc[i, 'Номер'] = i
+            df.loc[i, 'Наименование показателей'] = stat[i]
+            df.loc[i, 'Единица измерения'] = ed[i]
+            df.loc[i, self.command] = result[i]
+
+        return df
+
+    def details(self):
+        i = 1
+        df = pd.DataFrame({'Номер': [], 'Операция': [], 'Ошибки': []})
+        for obj in self.buttons:
+            k = 0
+            name = str(obj['name'])
+
+            time = int(obj['end_time'][:2]) * 60 + int(obj['end_time'][3:5]) - (
+                        int(obj['start_time'][:2]) * 60 + int(obj['start_time'][3:5]))
+
+            if time != int(self.time_operation.loc[(self.time_operation['операция'] == name), 'время, мин.'].values[0]):
+                k = 1
+                df.loc[i, 'Номер'] = i
+                df.loc[i, 'Операция'] = name
+                df.loc[i, 'Ошибки'] = 'Длительность операции не соответствует заявленной'
+                i += 1
+            else:
+                self.count += 0.2
+            if obj['name'].lower().find('отправление') != -1 and k == 0:
+                self.departure += 1
+        return df
 
 
 class ReportWindow(QMainWindow):
@@ -24,6 +120,7 @@ class ReportWindow(QMainWindow):
         account_menu = menubar.addMenu('Счет')
         details_menu = menubar.addMenu('Детализация')
         bindings_menu = menubar.addMenu('Привязки')
+
 
     def createMenuBar(self):
         # Create menu bar
@@ -65,6 +162,29 @@ class ReportWindow(QMainWindow):
 
         table.setHorizontalHeaderLabels(["Команда", "Прибытие поездов", "Отправлено поездов", "Всего"])
 
+
+        try:
+            with open('configs/db_config.json', 'r') as config_file:
+                config = json.load(config_file)
+
+            connection = mysql.connector.connect(**config)
+            cursor = connection.cursor()
+
+            # Загрузка списка названий карт, доступных пользователю
+            query = "SELECT map_id, name FROM maps_competitions WHERE user_id = %s"
+            cursor.execute(query, (USER_ID,))
+            maps = cursor.fetchall()
+
+            for map_id, name in maps:
+                self.my_map_list.addItem(f"{map_id}: {name}")
+
+            cursor.close()
+            connection.close()
+        except mysql.connector.Error as err:
+            QMessageBox.critical(self, 'Ошибка', f'Ошибка при подключении к базе данных: {err}')
+
+
+        #k=Report(s, "almato")
         data = [
             ["Team A", "10", "5"],
             ["Team B", "8", "7"],
@@ -80,9 +200,9 @@ class ReportWindow(QMainWindow):
         style = "::section {""background-color: black; color: white;}"
         table.horizontalHeader().setStyleSheet(style)
 
-        table.setColumnWidth(0, 150)  # Первый столбец
-        table.setColumnWidth(1, 150)  # Второй столбец
-        table.setColumnWidth(2, 180)  # Третий столбец
+        table.setColumnWidth(0, 150)
+        table.setColumnWidth(1, 150)
+        table.setColumnWidth(2, 180)
 
         table.show()
 

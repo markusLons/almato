@@ -48,20 +48,93 @@ class AddUserDialog(QDialog):
         self.setLayout(layout)
 
     def add_user(self):
-        # Получите значения, введенные пользователем
         new_user_username = self.username_input.text()
         new_user_password = self.password_input.text()
         new_user_type = self.type_input.text()
         new_user_name = self.name_input.text()
 
-        # Выполните SQL-запрос для вставки новой карты в базу данных, как описано в предыдущем ответе
-        # Включите значения начала и конца времени в ваш SQL-запрос
+        # Выполните SQL-запрос для вставки нового пользователя в базу данных
         self.send_user_on_SQL(user_username=new_user_username,
-                             user_password=new_user_password,
-                             user_type=new_user_type,
-                             user_name=new_user_name)
-        # Закройте диалоговое окно после создания карты
+                              user_password=new_user_password,
+                              user_type=new_user_type,
+                              user_name=new_user_name)
+
+        # Получите ID только что добавленного пользователя
+        user_id = self.get_user_id(user_username=new_user_username)
+
+        # Теперь добавьте карту первую для нового пользователя в таблицу maps
+        self.load_new_user_list(user_id=user_id)
+
+        # Закройте диалоговое окно после создания пользователя и добавления карты
         self.accept()
+
+    def get_user_id(self, user_username):
+        with open('configs/db_config.json', 'r') as config_file:
+            config = json.load(config_file)
+
+        connection = mysql.connector.connect(**config)
+        cursor = connection.cursor()
+
+        query = "SELECT id FROM users WHERE username = %s"
+        values = (user_username,)
+
+        try:
+            cursor.execute(query, values)
+            user_id = cursor.fetchone()[0]  # Получите ID пользователя
+            return user_id
+        except Exception as e:
+            print(f"Ошибка при получении ID пользователя: {e}")
+        finally:
+            cursor.close()
+            connection.close()
+
+    def load_new_user_list(self, user_id):
+        with open('configs/db_config.json', 'r') as config_file:
+            config = json.load(config_file)
+
+        connection = mysql.connector.connect(**config)
+        cursor = connection.cursor()
+
+        use = user_id
+
+        user_id = 1
+
+        # Получите данные карты из таблицы maps_competitions
+        select_query = "SELECT map_data, comment, name FROM maps_competitions WHERE user_id = %s"
+        select_values = (user_id,)
+
+        try:
+            cursor.execute(select_query, select_values)
+            map_data_rows = cursor.fetchall()
+        except Exception as e:
+            print(f"Ошибка при выборе данных карты: {e}")
+            cursor.close()
+            connection.close()
+            return
+
+        user_id = use
+
+        # Вставьте данные карты в таблицу maps
+        insert_query = """
+        INSERT INTO maps
+        (user_id, map_data, comment, name, data_create, data_edit)
+        VALUES
+        (%s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        """
+
+        for map_data_row in map_data_rows:
+            # Значения для параметризованного запроса
+            insert_values = (user_id,) + map_data_row
+
+            try:
+                cursor.execute(insert_query, insert_values)
+                connection.commit()
+                print("Карта успешно добавлена для нового пользователя")
+            except Exception as e:
+                print(f"Ошибка при добавлении карты: {e}")
+
+        cursor.close()
+        connection.close()
 
     def send_user_on_SQL(self, user_username, user_password, user_type, user_name):
         with open('configs/db_config.json', 'r') as config_file:
@@ -426,12 +499,12 @@ class MapsWindow(QWidget):
             cursor = connection.cursor()
 
             # Загрузка списка названий всех соревнований
-            query = "SELECT competitions.competition_id, competitions.name, competitions.date FROM competitions"
+            query = "SELECT maps_competitions.competition_id, maps_competitions.name, maps_competitions.data_end, maps_competitions.data_start FROM maps_competitions"
             cursor.execute(query)
             all_competitions = cursor.fetchall()
 
-            for competition_id, competition_name, competition_date in all_competitions:
-                self.competitions_list.addItem(f"{competition_id}: {competition_name} (Дата: {competition_date})")
+            #for competition_id, competition_name, competition_date in all_competitions:
+            #    self.competitions_list.addItem(f"{competition_id}: {competition_name} (Дата: {competition_date})")
 
             cursor.close()
             connection.close()
@@ -500,7 +573,7 @@ class MapsWindow(QWidget):
             cursor = connection.cursor()
 
             # Загрузка данных о выбранной карте
-            query = "SELECT name, map_data, comment, data_create, data_edit FROM maps WHERE map_id = %s"
+            query = "SELECT name, map_data, comment, data_start, data_end FROM maps_competitios WHERE competition_id = %s"
             cursor.execute(query, (map_id,))
             map_data = cursor.fetchone()
 
@@ -571,14 +644,16 @@ class MapsWindow(QWidget):
         except mysql.connector.Error as err:
             QMessageBox.critical(self, 'Ошибка', f'Ошибка при подключении к базе данных: {err}')
 
+
     def add_user(self):
         add_user_dialog = AddUserDialog(self)
 
         # Откройте диалоговое окно
         if add_user_dialog.exec_() == QDialog.Accepted:
             print("1")
+
             # Обновите список карт на текущей вкладке
-            #self.load_user_list()
+            #self.load_new_user_list()
 
     def create_map(self):
         # Создайте экземпляр диалогового окна для создания новой карты
