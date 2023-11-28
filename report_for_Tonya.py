@@ -161,7 +161,7 @@ class ReportWindow(QMainWindow):
         table.setRowCount(5)
 
         table.setHorizontalHeaderLabels(["Команда", "Прибытие поездов", "Отправлено поездов", "Всего"])
-
+        maps_id = [1,2,3,4]
 
         try:
             with open('configs/db_config.json', 'r') as config_file:
@@ -170,13 +170,14 @@ class ReportWindow(QMainWindow):
             connection = mysql.connector.connect(**config)
             cursor = connection.cursor()
 
-            # Загрузка списка названий карт, доступных пользователю
-            query = "SELECT map_id, name FROM maps_competitions WHERE user_id = %s"
-            cursor.execute(query, (USER_ID,))
-            maps = cursor.fetchall()
+            placeholder = ', '.join(['%s'] * len(maps_id))
 
-            for map_id, name in maps:
-                self.my_map_list.addItem(f"{map_id}: {name}")
+            query = f"SELECT map_id, name, data FROM maps_competitions WHERE map_id IN ({placeholder})"
+
+            # Execute the query with the values from maps_is
+            cursor.execute(query, tuple(maps_id))
+
+            maps = cursor.fetchall()
 
             cursor.close()
             connection.close()
@@ -185,6 +186,10 @@ class ReportWindow(QMainWindow):
 
 
         #k=Report(s, "almato")
+        data = []
+        for map in maps:
+            report = Report(map["data"], map["name"])
+            data.append(report.sum)
         data = [
             ["Team A", "10", "5"],
             ["Team B", "8", "7"],

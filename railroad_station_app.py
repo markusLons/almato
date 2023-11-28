@@ -612,5 +612,5 @@ def main(id, user_id, session_id = None):
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
-    main(1, 1)
+    main(16, 1)
 
