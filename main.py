@@ -6,5 +6,5 @@ import railroad_station_app
 
 if __name__ == "__main__":
     print(sys.argv[1])
-    railroad_station_app.main(sys.argv[1])
+    railroad_station_app.main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
 

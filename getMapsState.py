@@ -14,84 +14,6 @@ from PyQt5.QtWidgets import QDialog, QLabel, QTextEdit, QPushButton
 
 from PyQt5.QtWidgets import QDialog, QLabel, QLineEdit, QComboBox, QSpinBox, QPushButton, QVBoxLayout
 
-class AddUserDialog(QDialog):
-    def __init__(self, parent):
-        super().__init__()
-        self.my_parent = parent
-        self.setWindowTitle('Добавить нового поьзователя')
-
-        self.username_label = QLabel('Имя пользователя:')
-        self.username_input = QLineEdit()
-
-        self.password_label = QLabel('Пароль:')
-        self.password_input = QLineEdit()
-
-        self.type_label = QLabel('Тип пользователя (1 - администратор, иначе 0):')
-        self.type_input = QLineEdit()
-
-        self.name_label = QLabel('Фамилия Имя:')
-        self.name_input = QLineEdit()
-
-        self.create_button = QPushButton('Создать')
-        self.create_button.clicked.connect(self.add_user)
-
-        layout = QVBoxLayout()
-        layout.addWidget(self.username_label)
-        layout.addWidget(self.username_input)
-        layout.addWidget(self.password_label)
-        layout.addWidget(self.password_input)
-        layout.addWidget(self.type_label)
-        layout.addWidget(self.type_input)
-        layout.addWidget(self.name_label)
-        layout.addWidget(self.name_input)
-        layout.addWidget(self.create_button)
-        self.setLayout(layout)
-
-    def add_user(self):
-        # Получите значения, введенные пользователем
-        new_user_username = self.username_input.text()
-        new_user_password = self.password_input.text()
-        new_user_type = self.type_input.text()
-        new_user_name = self.name_input.text()
-
-        # Выполните SQL-запрос для вставки новой карты в базу данных, как описано в предыдущем ответе
-        # Включите значения начала и конца времени в ваш SQL-запрос
-        self.send_user_on_SQL(user_username=new_user_username,
-                             user_password=new_user_password,
-                             user_type=new_user_type,
-                             user_name=new_user_name)
-        # Закройте диалоговое окно после создания карты
-        self.accept()
-
-    def send_user_on_SQL(self, user_username, user_password, user_type, user_name):
-        with open('configs/db_config.json', 'r') as config_file:
-            config = json.load(config_file)
-
-        connection = mysql.connector.connect(**config)
-        cursor = connection.cursor()
-
-        # Используйте параметризованный запрос, чтобы избежать SQL-инъекций
-        query = """
-        INSERT INTO users 
-        (username, password, type, name) 
-        VALUES 
-        (%s, %s, %s, %s)
-        """
-
-        # Значения для параметризованного запроса
-        values = (user_username, user_password, user_type, user_name)
-
-        try:
-            cursor.execute(query, values)
-            connection.commit()
-            print("Запись успешно добавлена в базу данных")
-        except Exception as e:
-            print(f"Ошибка при добавлении записи в базу данных: {e}")
-        finally:
-            cursor.close()
-            connection.close()
-
-
 class CreateMapDialog(QDialog):
     def __init__(self, parent):
         super().__init__()
@@ -196,28 +118,6 @@ class CreateMapDialog(QDialog):
         # Закройте диалоговое окно после создания карты
         self.accept()
 
-def get_user_info_and_maps():
-
-    with open('configs/db_config.json', 'r') as config_file:
-        config = json.load(config_file)
-
-    connection = mysql.connector.connect(**config)
-    cursor = connection.cursor()
-
-    # Загрузка данных о пользователе
-    query = "SELECT username, type, name FROM users WHERE id = %s"
-    cursor.execute(query, (USER_ID,))
-    user = cursor.fetchall()[0]
-    global USER_TYPE, name, login
-    USER_TYPE = user[1]
-    name = user[2]
-    login = user[0]
-
-    print(user)
-
-    cursor.close()
-    connection.close()
-
 class MapsWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -286,10 +186,6 @@ class MapsWindow(QWidget):
                 self.create_competition_button = QPushButton('Создать соревнование')
                 self.create_competition_button.clicked.connect(self.create_competition)
                 self.my_map_info_layout.addWidget(self.create_competition_button)
-
-                self.new_user = QPushButton('Добавить нового пользователя')
-                self.new_user.clicked.connect(self.add_user)
-                self.my_map_info_layout.addWidget(self.new_user)
             my_maps_layout.addLayout(self.my_map_info_layout)
 
             self.my_maps_tab.setLayout(my_maps_layout)
@@ -298,7 +194,6 @@ class MapsWindow(QWidget):
         # Вкладка "Все карты" (для пользователя с типом 1)
         if USER_TYPE == 1:
             self.all_maps_tab = QWidget()
-
             self.tabs.addTab(self.all_maps_tab, 'Все карты')
 
             all_maps_layout = QHBoxLayout()
@@ -346,22 +241,6 @@ class MapsWindow(QWidget):
 
             self.all_maps_tab.setLayout(all_maps_layout)
 
-        # Вкладка "Соревнования" (для пользователя с типом 1)
-        if USER_TYPE == 1:
-            self.all_competitions_tab = QWidget()
-
-            self.tabs.addTab(self.all_competitions_tab, 'Соревнования')
-
-            all_competitions_layout = QHBoxLayout()
-
-            # Список названий всех карт
-            self.competitions_list = QListWidget()
-            self.competitions_list.itemClicked.connect(self.load_competition_data)
-            all_competitions_layout.addWidget(self.competitions_list)
-
-            self.all_competitions_tab.setLayout(all_competitions_layout)
-            self.load_all_competitions_list()
-
         # Дополнительные кнопки для пользователя с типом 1
         if USER_TYPE == 1:
             self.create_map_button = QPushButton('Создать карту')
@@ -370,18 +249,31 @@ class MapsWindow(QWidget):
 
             self.report_button = QPushButton('ЦЗТ')
             self.report_button.clicked.connect(self.open_report_window)
-            self.map_info_layout.addWidget(self.report_button)
+            self.map_info_layout.addWidget(self.report_button) # убрать
 
         # Загрузка списков карт
         self.load_map_list()
         if USER_TYPE == 1:
             self.load_all_maps_list()
+        self.session_code_label = QLabel('Код сессии:')
+        self.session_code_input = QLineEdit()
+        layout.addWidget(self.session_code_label)
+        layout.addWidget(self.session_code_input)
 
+        # Добавляем кнопку подключения
+        self.connect_button = QPushButton('Подключиться')
+        self.connect_button.clicked.connect(self.connect_to_session)
+        layout.addWidget(self.connect_button)
         self.setLayout(layout)
 
     def open_report_window(self):
         subprocess.run(["python", "report_for_Tonya.py"])
-
+    def connect_to_session(self):
+        # Здесь вы можете получить код сессии из self.session_code_input.text()
+        session_code = self.session_code_input.text()
+        session_code, mapID = session_code.split("*")
+        main_command = f"python main.py {mapID} {USER_ID} {session_code}"
+        subprocess.Popen(main_command, shell=True)
     def load_map_list(self):
         try:
             with open('configs/db_config.json', 'r') as config_file:
@@ -424,27 +316,6 @@ class MapsWindow(QWidget):
         except mysql.connector.Error as err:
             QMessageBox.critical(self, 'Ошибка', f'Ошибка при подключении к базе данных: {err}')
 
-    def load_all_competitions_list(self):
-        try:
-            with open('configs/db_config.json', 'r') as config_file:
-                config = json.load(config_file)
-
-            connection = mysql.connector.connect(**config)
-            cursor = connection.cursor()
-
-            # Загрузка списка названий всех соревнований
-            query = "SELECT competitions.competition_id, competitions.name, competitions.date FROM competitions"
-            cursor.execute(query)
-            all_competitions = cursor.fetchall()
-
-            for competition_id, competition_name, competition_date in all_competitions:
-                self.competitions_list.addItem(f"{competition_id}: {competition_name} (Дата: {competition_date})")
-
-            cursor.close()
-            connection.close()
-        except mysql.connector.Error as err:
-            QMessageBox.critical(self, 'Ошибка', f'Ошибка при подключении к базе данных: {err}')
-
     def load_my_map_data(self, item):
         map_id = item.text().split(':')[0]
         try:
@@ -465,33 +336,6 @@ class MapsWindow(QWidget):
                 self.my_comment_display.setPlainText(map_data[2].decode('utf-8'))
                 self.my_created_display.setText(str(map_data[3]))
                 self.my_updated_display.setText(str(map_data[4]))
-                print("1")
-
-            cursor.close()
-            connection.close()
-        except mysql.connector.Error as err:
-            QMessageBox.critical(self, 'Ошибка', f'Ошибка при подключении к базе данных: {err}')
-
-    def load_competition_data(self, item):
-        map_id = item.text().split(':')[0]
-        try:
-            with open('configs/db_config.json', 'r') as config_file:
-                config = json.load(config_file)
-
-            connection = mysql.connector.connect(**config)
-            cursor = connection.cursor()
-
-            # Загрузка данных о выбранной карте
-            query = "SELECT name, map_data, comment, data_create, data_edit FROM maps WHERE map_id = %s"
-            cursor.execute(query, (map_id,))
-            map_data = cursor.fetchone()
-
-            if map_data:
-                self.map_name_display.setText(map_data[0])
-                self.map_data_display.setPlainText(map_data[1].decode('utf-8'))
-                self.comment_display.setPlainText(map_data[2].decode('utf-8'))
-                self.created_display.setText(str(map_data[3]))
-                self.updated_display.setText(str(map_data[4]))
 
             cursor.close()
             connection.close()
@@ -543,7 +387,7 @@ class MapsWindow(QWidget):
                 map_data_str = map_data[0].decode('utf-8')
 
                 # Запустить main.py и передать данные в качестве аргумента
-                main_command = f"python main.py {map_id}"
+                main_command = f"python main.py {map_id} {USER_ID} {0}"
                 subprocess.Popen(main_command, shell=True)
 
             cursor.close()
@@ -570,7 +414,7 @@ class MapsWindow(QWidget):
                 map_data_str = map_data[0].decode('utf-8')
 
                 # Запустить main.py и передать данные в качестве аргумента
-                main_command = f"python main.py {map_id}"
+                main_command = f"python main.py {map_id} {USER_ID} {0}"
                 subprocess.Popen(main_command, shell=True)
 
             cursor.close()
@@ -586,16 +430,6 @@ class MapsWindow(QWidget):
         if create_map_dialog.exec_() == QDialog.Accepted:
             # Обновите список карт на текущей вкладке
             self.load_map_list()
-
-    def add_user(self):
-        add_user_dialog = AddUserDialog(self)
-
-        # Откройте диалоговое окно
-        if add_user_dialog.exec_() == QDialog.Accepted:
-            print("1")
-            # Обновите список карт на текущей вкладке
-            #self.load_user_list()
-
     def update_map_list(self):
         # Очистите список карт
         self.my_map_list.clear()
@@ -605,6 +439,28 @@ class MapsWindow(QWidget):
     def create_competition(self):
         # Добавьте здесь код для создания нового соревнования
         pass
+
+def get_user_info_and_maps():
+
+    with open('configs/db_config.json', 'r') as config_file:
+        config = json.load(config_file)
+
+    connection = mysql.connector.connect(**config)
+    cursor = connection.cursor()
+
+    # Загрузка данных о пользователе
+    query = "SELECT username, type, name FROM users WHERE id = %s"
+    cursor.execute(query, (USER_ID,))
+    user = cursor.fetchall()[0]
+    global USER_TYPE, name, login
+    USER_TYPE = user[1]
+    name = user[2]
+    login = user[0]
+
+    print(user)
+
+    cursor.close()
+    connection.close()
 
 def main():
     global USER_ID, USER_TYPE

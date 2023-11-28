@@ -9,13 +9,14 @@ from datetime import datetime, timedelta
 import EventManager
 
 from PyQt5.QtWidgets import QDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout
+import uuid
+
 
 
 class ButtonInfoDialog(QDialog):
     def __init__(self, button):
         super().__init__()
         self.button = button
-
         self.setWindowTitle("Информация о кнопке")
         self.layout = QVBoxLayout()
 
@@ -91,7 +92,10 @@ class ButtonInfoDialog(QDialog):
 
 
 class DraggableButton(QPushButton):
-    def __init__(self, path = 'merged_datas_1.json', parent=None, simple=None, line_index=None, time_now=None, pixel_time_mapping=None):
+    def __init__(self, path = 'merged_datas_1.json', parent=None, simple=None, line_index=None, time_now=None, pixel_time_mapping=None, index = None):
+        if index == None:
+            index = str(uuid.uuid4())
+        self.index = index
         # Добавить сюда вот parent.scroll_area.widget().layout()
         super().__init__(parent.scroll_content)  # Устанавливаем виджет-родитель
         self.my_parent = parent
@@ -360,6 +364,10 @@ class DraggableButton(QPushButton):
                         new_pos.setX(new_x)
 
             self.move(new_pos)
+            if self.my_parent.session_id is not None:
+                # Создаем событие "change_coord"
+                event_description = f"change_coord: {new_pos.x()} {new_pos.y()}"
+                self.my_parent.my_session.create_event(self.index, event_description)
 
     def nearest_button(self):
         for button in self.my_parent.buttons:
@@ -381,3 +389,12 @@ class DraggableButton(QPushButton):
             self.dragging = False
             self.hide_time_label()
             self.start_my_time, self.end_my_time = self.get_coordinate()
+
+    def move_button_from_event(self, event):
+        if 'changecoord' in event:
+            coordinates = event.split("_")[-1][:-5].split("!")[1:]
+            new_x, new_y = int(coordinates[0]), int(coordinates[1])
+            self.move(new_x, new_y)
+            self.show_time_label(self.get_coordinate())
+
+

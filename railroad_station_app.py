@@ -2,20 +2,22 @@
 import os
 import json
 import sys
+import uuid
 
 import mysql.connector
 from PyQt5.QtWidgets import (
     QMainWindow, QToolBar, QAction, QPushButton, QWidget, QScrollArea, QVBoxLayout,
     QHBoxLayout, QLabel, QFrame, QSpacerItem, QSizePolicy, QInputDialog, QMenu,
-    QMessageBox, QApplication,
+    QMessageBox, QApplication, QDialog,
 )
 from PyQt5.QtWidgets import QLineEdit
 from PyQt5.QtWidgets import QComboBox
-from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtCore import Qt, QSize, QTimer
 from PyQt5.QtGui import QIcon
 from datetime import datetime
 
 import EventManager
+import session
 from draggable_button import DraggableButton
 
 pixel_time_mapping = {}
@@ -49,8 +51,9 @@ def load_map_data_from_sql(item):
 
 
 class RailroadStationApp(QMainWindow):
-    def __init__(self, id): 
+    def __init__(self, id, session_id = None):
         self.pixel_time_mapping = {}
+        self.session_id = session_id
         super().__init__()
         self.data = ""
         self.map_id = id
@@ -75,6 +78,45 @@ class RailroadStationApp(QMainWindow):
         self.horizontal_line_names = []
         self.initUI()
         self.load_state_from_data(data)
+        if self.session_id is not None:
+            self.start_timer()
+            my_sesion_client = session.Client(self.session_id, self.user_id)
+            self.create_session()
+
+    def update_button_dict(self):
+        self.buttons_dict = {}
+        for i in self.buttons:
+            self.buttons_dict[str(i.index)] = i
+    def start_timer(self):
+        self.proccesed_events = set()
+        self.update_button_dict()
+        # Создаем таймер
+        self.timer = QTimer(self)
+        # Подключаем слот для выполнения функции каждые 10 секунд
+        self.timer.timeout.connect(self.procces_session_event)
+        # Устанавливаем интервал в 10000 миллисекунд (10 секунд)
+        self.timer.start(2000)
+    def procces_session_event(self):
+        events_folder = 'tmp'
+        event_files = list(set([f for f in os.listdir(events_folder) if f.endswith('.json')]) - self.proccesed_events)
+
+        for event_file in event_files:
+            try:
+                # Извлекаем данные из названия файла
+                _, event_id, _, object_id, _, operation_type = event_file.split('_')
+                event_id, object_id, operation_type = int(event_id), object_id, operation_type
+
+
+                # Обрабатываем событие, отправляем данные в соответствующую кнопку
+                if object_id in self.buttons_dict:
+                    button = self.buttons_dict[object_id]
+                    button.move_button_from_event(event_file)
+                self.proccesed_events.add(event_file)
+
+            except Exception as e:
+                print(f"Error processing event file {event_file}: {e}")
+
+
     def load_constants_from_json(self):
         try:
             # Открываем файл mapConstant.json и читаем константы
@@ -139,6 +181,11 @@ class RailroadStationApp(QMainWindow):
         loadAction.triggered.connect(self.load_state_from_data)
         fileMenu.addAction(loadAction)
 
+        CreateSession = QAction('Сеть', self)
+        CreateSession.setStatusTip('Создать сеанс')
+        CreateSession.triggered.connect(self.create_session)
+        fileMenu.addAction(CreateSession)
+
         # Создаем меню "Вид" и добавляем в него действия
         viewMenu = self.menuBar().addMenu('Вид')
         viewMenu.addAction(FullscreenAction)
@@ -174,6 +221,18 @@ class RailroadStationApp(QMainWindow):
         dropdownMenu.addAction(removeHorizontalLineAction_2)
 
         canvasMenu.addMenu(dropdownMenu)
+    def create_session(self):
+        # Создаем уникальный идентификатор сессии
+        if self.session_id is None:
+            self.session_id = str(uuid.uuid4())+self.map_id
+        self.start_timer()
+        self.my_session = session.Host(self.session_id, self.user_id)
+        self.my_session_client = session.Client(self.session_id, self.user_id)
+        self.save_state()
+        # Отображаем окно с идентификатором сессии
+        session_dialog = SessionDialog(self.session_id, parent=self)
+        session_dialog.exec_()
+
     def get_map_data(self):
         state = {}  # Создаем пустой словарь для сохранения состояния
 
@@ -183,11 +242,12 @@ class RailroadStationApp(QMainWindow):
         for i, button in enumerate(self.buttons):
             start_time_button, end_time_button = button.get_coordinate()
             button_info = {
-                'index': i,  # Порядковый номер кнопки
+                'index': button.index,  # Порядковый номер кнопки
                 'name': button.simple,  # Название кнопки (предполагается, что текст кнопки содержит имя)
                 'start_time': start_time_button.strftime("%H:%M"),  # Время начала
                 'end_time': end_time_button.strftime("%H:%M"),  # Время окончания
                 'line_index': button.line_index,  # Номер строки, на которой находится кнопка
+                'train_number' : button.train,
             }
             buttons_info.append(button_info)
 
@@ -259,7 +319,8 @@ class RailroadStationApp(QMainWindow):
                                      time_now=(button_info.get('start_time'),
                                                button_info.get('end_time')),
                                      pixel_time_mapping=pixel_time_mapping,
-                                     line_index= int(button_info.get("line_index"))
+                                     line_index= int(button_info.get("line_index")),
+                                     index = button_info.get("index")
                                      )
             button.show()
             self.buttons.append(button)
@@ -523,14 +584,33 @@ class RailroadStationApp(QMainWindow):
         button = DraggableButton(parent=self, simple=simple)
         button.show()
         self.buttons.append(button)
+class SessionDialog(QDialog):
+    def __init__(self, session_id, parent=None):
+        super().__init__(parent)
 
+        # Создаем метку с идентификатором сессии
+        label = QLabel(f"Идентификатор сессии:\n{session_id}")
 
-def main(id):
+        # Кнопка для копирования в буфер обмена
+        copy_button = QPushButton("Копировать в буфер обмена")
+        copy_button.clicked.connect(lambda: QApplication.clipboard().setText(session_id))
+
+        # Создаем вертикальный макет и добавляем виджеты
+        layout = QVBoxLayout()
+        layout.addWidget(label)
+        layout.addWidget(copy_button)
+
+        # Устанавливаем макет для диалогового окна
+        self.setLayout(layout)
+
+def main(id, user_id, session_id = None):
+    if session_id is not None:
+        pass
     app = QApplication(sys.argv)
-    window = RailroadStationApp(id)
+    window = RailroadStationApp(id, session_id)
     window.show()
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
-    main(1)
+    main(1, 1, )
 

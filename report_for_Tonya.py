@@ -13,6 +13,8 @@ class ReportWindow(QMainWindow):
         # Устанавливаем стиль приложения
         self.setApplicationStyle()
 
+
+
         # Create menu bar
         menubar = self.createMenuBar()
         menubar.setGeometry(0, 0, 900, 30)
