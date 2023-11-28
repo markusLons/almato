@@ -37,8 +37,8 @@ def load_map_data_from_sql(item):
 
         if map_data:
             map_info["name"] = map_data[0]
-            map_info["data"] = map_data[1].decode('utf-8')
-            map_info["comment"] = map_data[2].decode('utf-8')
+            map_info["data"] = map_data[1]
+            map_info["comment"] = map_data[2]
             map_info["user_id"] = map_data[5]
 
         cursor.close()
@@ -282,9 +282,7 @@ class RailroadStationApp(QMainWindow):
                 self.horizontal_lines.append(line)
 
                 # Создаем виджет с именем (QLineEdit) и устанавливаем начальное имя
-                name_edit = QLineEdit(f"Путь {self.num_lines+1}")  # Замените "Имя полосы" на фактическое имя
-                self.horizontal_line_names.append(f"Путь {self.num_lines+1}")
-                self.num_lines +=1
+                name_edit = QLineEdit("Имя полосы")  # Замените "Имя полосы" на фактическое имя
                 name_edit.setFixedSize(100, 30)  # Установите желаемый размер для виджета с именем
                 name_edit.returnPressed.connect(lambda text=name_edit.text(), line=line: self.change_name(text, line))
 
@@ -298,8 +296,8 @@ class RailroadStationApp(QMainWindow):
                 layout.addItem(spacer)
 
             self.scroll_area.widget().setLayout(layout)
-            #self.num_lines += user_input
-
+            self.num_lines += user_input
+            self.horizontal_line_names.append("Имя полосы")
             pass
 
     def add_horizontal_line1(self):
@@ -310,7 +308,7 @@ class RailroadStationApp(QMainWindow):
         line.setFixedSize(maxPixelsScroll, 50)
         self.horizontal_lines.append(line)
 
-        name_edit = QLineEdit(f"Путь {self.num_lines+1}")
+        name_edit = QLineEdit("Имя полосы")
         name_edit.setFixedSize(100, 30)
         name_edit.returnPressed.connect(lambda text=name_edit.text(), line=line: self.change_name(text, line))
 
@@ -334,7 +332,6 @@ class RailroadStationApp(QMainWindow):
                 line.setParent(None)
                 del line
                 self.num_lines -= 1
-                self.horizontal_line_names.pop(index)
                 self.scroll_area.widget().update()
             else:
                 QMessageBox.warning(self, "Предупреждение", "Несуществующая строка!", QMessageBox.Ok)
@@ -344,7 +341,6 @@ class RailroadStationApp(QMainWindow):
             line.setParent(None)
             del line
             self.scroll_area.widget().update()
-            self.horizontal_line_names.pop(0)
             self.num_lines -=1
         else:
             QMessageBox.warning(self, "Предупреждение", "Несуществующая строка!", QMessageBox.Ok)
@@ -356,7 +352,6 @@ class RailroadStationApp(QMainWindow):
             del line
             self.scroll_area.widget().update()
             self.num_lines -= 1
-            self.horizontal_line_names.pop(-1)
         else:
             QMessageBox.warning(self, "Предупреждение", "Несуществующая строка!", QMessageBox.Ok)
 
@@ -495,19 +490,17 @@ class RailroadStationApp(QMainWindow):
     def createHorizontalLines(self):
         layout = self.scroll_area.widget().layout()
 
-        for num in range(1, self.num_lines + 1):  # Изменено: использование range с начальным значением 1
+        for _ in range(self.num_lines):
             line_layout = QHBoxLayout()  # Создаем горизонтальный макет для строки
             line = QPushButton()
             line.setFixedSize(maxPixelsScroll, 50)
             self.horizontal_lines.append(line)
 
             # Создаем виджет с именем (QLineEdit) и устанавливаем начальное имя
-            name_edit = QLineEdit(f"Путь {num}")  # Изменено: использование f-строки для названия
-            self.horizontal_line_names.append(f"Путь {num}")  # Изменено: добавление названия в список
+            name_edit = QLineEdit("Имя полосы")  # Замените "Имя полосы" на фактическое имя
+            self.horizontal_line_names.append("Имя полосы")
             name_edit.setFixedSize(100, 30)  # Установите желаемый размер для виджета с именем
-            name_edit.setObjectName(f"name_edit_{len(self.horizontal_line_names)}")
             name_edit.returnPressed.connect(lambda text=name_edit.text(), line=line: self.change_name(text, line))
-
 
             line_layout.addWidget(name_edit)  # Добавляем виджет с именем (QLineEdit) в макет строки
             line_layout.addWidget(line)  # Добавляем горизонтальную полосу в макет строки
@@ -522,23 +515,9 @@ class RailroadStationApp(QMainWindow):
         return self.horizontal_lines
 
     def change_name(self, new_name, line):
-        name_edit = self.sender()  # Получаем виджет, который вызвал событие
         index = self.horizontal_lines.index(line)
         self.horizontal_lines[index - 1].setText(new_name)
-
-        # Изменяем соответствующее имя в self.horizontal_line_names
-        name_edit_index = int(name_edit.objectName().split("_")[-1])
-        self.horizontal_line_names[name_edit_index] = new_name
-
-    def handle_name_edit_enter(self):
-        name_edit = self.sender()  # Получаем виджет, который вызвал событие
-        index = self.horizontal_line_names.index(name_edit.text())
-        line = self.horizontal_lines[index]
-
-        # Здесь мы можем сделать что-то с введенным именем, если это необходимо
-
-        # Вызываем change_name с новым именем
-        self.change_name(name_edit.text(), line)
+        self.horizontal_line_names.append[index-1]=new_name
 
     def get_widget(self, simple):
         button = DraggableButton(parent=self, simple=simple)

@@ -1,0 +1,16 @@
+{
+    "configurations": [
+        {
+            "type": "python",
+            "name": "Login",
+            "file": "login.py",
+            "arguments": [],
+        },
+        {
+            "type": "python",
+            "name": "mapList",
+            "file": "getMapsState.py",
+            "arguments": [],
+        },  
+    ]
+}
