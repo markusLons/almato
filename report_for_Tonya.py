@@ -1,10 +1,15 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QMenuBar, QMenu, QTableWidget, QTableWidgetItem, QMessageBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QMenuBar, QMenu, QTableWidget, QTableWidgetItem, \
+    QMessageBox, QDialog, QLabel, QLineEdit, QPushButton
 from PyQt5.QtGui import QPalette, QColor, QIcon
 import sys
 import mysql.connector
 USER_ID = "2"  # Замените на нужный вам ID пользователя
 USER_TYPE = 0  # Замените на тип пользователя (0 или 1)
-
+from PyQt5.QtWidgets import QApplication, QMainWindow, QAction, QMenuBar, QMenu, QTableWidget, QTableWidgetItem, QMessageBox, QVBoxLayout, QWidget
+from PyQt5.QtGui import QPalette, QColor, QIcon
+import sys
+import mysql.connector
+import json
 import json
 import pandas as pd
 import numpy as np
@@ -121,6 +126,14 @@ class ReportWindow(QMainWindow):
         details_menu = menubar.addMenu('Детализация')
         bindings_menu = menubar.addMenu('Привязки')
 
+        card_menu = menubar.addMenu('Карты для ЦЗТ')
+        show_maps_action = QAction('Показать карты', self)
+        show_maps_action.triggered.connect(self.showMaps)
+
+        card_menu.addAction(show_maps_action)
+
+        self.selected_map_ids = []
+
 
     def createMenuBar(self):
         # Create menu bar
@@ -154,6 +167,7 @@ class ReportWindow(QMainWindow):
         dark_palette.setColor(QPalette.HighlightedText, QColor(0, 0, 0))
         QApplication.setPalette(dark_palette)
 
+
     def showSummaryTable(self):
         table = QTableWidget(self)
         table.setGeometry(100, 100, 600, 400)
@@ -161,22 +175,17 @@ class ReportWindow(QMainWindow):
         table.setRowCount(5)
 
         table.setHorizontalHeaderLabels(["Команда", "Прибытие поездов", "Отправлено поездов", "Всего"])
-        maps_id = [1,2,3,4]
+
+        maps_id = self.selected_map_ids
 
         try:
             with open('configs/db_config.json', 'r') as config_file:
                 config = json.load(config_file)
-
             connection = mysql.connector.connect(**config)
             cursor = connection.cursor()
-
             placeholder = ', '.join(['%s'] * len(maps_id))
-
-            query = f"SELECT map_id, name, data FROM maps_competitions WHERE map_id IN ({placeholder})"
-
-            # Execute the query with the values from maps_is
+            query = f"SELECT map_id, name, map_data FROM maps WHERE map_id IN ({placeholder})"
             cursor.execute(query, tuple(maps_id))
-
             maps = cursor.fetchall()
 
             cursor.close()
@@ -184,19 +193,10 @@ class ReportWindow(QMainWindow):
         except mysql.connector.Error as err:
             QMessageBox.critical(self, 'Ошибка', f'Ошибка при подключении к базе данных: {err}')
 
-
-        #k=Report(s, "almato")
         data = []
         for map in maps:
-            report = Report(map["data"], map["name"])
-            data.append(report.sum)
-        data = [
-            ["Team A", "10", "5"],
-            ["Team B", "8", "7"],
-            ["Team C", "12", "9"],
-            ["Team D", "15", "10"],
-            ["Team E", "9", "8"]
-        ]
+            report = Report(map[2], map[1])
+            data.append((map[1], str(report.sum.iloc[0, 0]), str(report.arrival)))
 
         for i, row in enumerate(data):
             for j, item in enumerate(row):
@@ -211,11 +211,115 @@ class ReportWindow(QMainWindow):
 
         table.show()
 
+    def showSummaryTable(self):
+        table = QTableWidget(self)
+        table.setGeometry(100, 100, 600, 400)
+        table.setColumnCount(4)
+        table.setRowCount(5)
+
+        table.setHorizontalHeaderLabels(["Команда", "Прибытие поездов", "Отправлено поездов", "Всего"])
+        maps_id = [1, 2, 3, 4]
+        try:
+            with open('configs/db_config.json', 'r') as config_file:
+                config = json.load(config_file)
+            connection = mysql.connector.connect(**config)
+            cursor = connection.cursor()
+            placeholder = ', '.join(['%s'] * len(maps_id))
+            query = f"SELECT map_id, name, map_data FROM maps WHERE map_id IN ({placeholder})"
+            cursor.execute(query, tuple(maps_id))
+            maps = cursor.fetchall()
+
+            cursor.close()
+            connection.close()
+        except mysql.connector.Error as err:
+            QMessageBox.critical(self, 'Ошибка', f'Ошибка при подключении к базе данных: {err}')
+
+        data = []
+        for map in maps:
+            report = Report(map[2], map[1])
+            values_row = report.sum.iloc[0].values
+            command = values_row[0]
+            arrival_trains = int(values_row[1])  # Assuming the arrival column should be an integer
+            departure_trains = int(values_row[2])  # Assuming the departure column should be an integer
+            total_trains = int(values_row[3])  # Assuming the total column should be an integer
+            data.append((map[1], str(arrival_trains), str(departure_trains), str(total_trains)))
+
+        for i, row in enumerate(data):
+            for j, item in enumerate(row):
+                table.setItem(i, j, QTableWidgetItem(item))
+
+        style = "::section {""background-color: black; color: white;}"
+        table.horizontalHeader().setStyleSheet(style)
+
+        table.setColumnWidth(0, 150)
+        table.setColumnWidth(1, 150)
+        table.setColumnWidth(2, 180)
+
+        table.show()
+
+    def showMaps(self):
+        try:
+            with open('configs/db_config.json', 'r') as config_file:
+                config = json.load(config_file)
+            connection = mysql.connector.connect(**config)
+            cursor = connection.cursor()
+            cursor.execute("SELECT map_id, name FROM maps")
+            maps = cursor.fetchall()
+            cursor.close()
+            connection.close()
+        except mysql.connector.Error as err:
+            QMessageBox.critical(self, 'Ошибка', f'Ошибка при подключении к базе данных: {err}')
+            return
+
+        dialog = MapDialog(maps, parent=self)
+        result = dialog.exec_()
+
+        if result == QDialog.Accepted:
+            self.selected_map_ids = dialog.getSelectedIndices()
+            print("Selected Map IDs:", self.selected_map_ids)
+
     def contextMenuEvent(self, event):
         context_menu = QMenu(self)
         show_summary_action = context_menu.addAction("Показать сводную таблицу")
         show_summary_action.triggered.connect(self.showSummaryTable)
         context_menu.exec_(event.globalPos())
+
+class MapDialog(QDialog):
+    def __init__(self, maps, parent=None):
+        super(MapDialog, self).__init__(parent)
+
+        self.setWindowTitle('Карты ЦЗТ')
+        self.setGeometry(200, 200, 400, 300)
+
+        layout = QVBoxLayout(self)
+
+        table = QTableWidget(self)
+        table.setColumnCount(2)
+        table.setRowCount(len(maps))
+        table.setHorizontalHeaderLabels(["Индекс", "Название карты"])
+
+        for i, map in enumerate(maps):
+            table.setItem(i, 0, QTableWidgetItem(str(map[0])))
+            table.setItem(i, 1, QTableWidgetItem(map[1]))
+
+        layout.addWidget(table)
+
+        index_label = QLabel('Введите индексы карт (через запятую):', self)
+        layout.addWidget(index_label)
+
+        self.index_input = QLineEdit(self)
+        layout.addWidget(self.index_input)
+
+        ok_button = QPushButton('OK', self)
+        ok_button.clicked.connect(self.accept)
+        layout.addWidget(ok_button)
+
+    def getSelectedIndices(self):
+        input_text = self.index_input.text()
+        if input_text:
+            return [int(index.strip()) for index in input_text.split(',')]
+        else:
+            return []
 
 def main():
     app = QApplication(sys.argv)
