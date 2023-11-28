@@ -4,7 +4,9 @@ import json
 import mysql.connector
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QMessageBox, QLineEdit
 from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QPixmap, QMovie
 
+import os
 
 
 class EnterLineEdit(QLineEdit):
