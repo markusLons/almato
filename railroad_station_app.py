@@ -224,7 +224,7 @@ class RailroadStationApp(QMainWindow):
     def create_session(self):
         # Создаем уникальный идентификатор сессии
         if self.session_id is None:
-            self.session_id = str(uuid.uuid4())+self.map_id
+            self.session_id = str(uuid.uuid4())+str(self.map_id)
         self.start_timer()
         self.my_session = session.Host(self.session_id, self.user_id)
         self.my_session_client = session.Client(self.session_id, self.user_id)
@@ -612,5 +612,5 @@ def main(id, user_id, session_id = None):
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
-    main(1, 1, )
+    main(1, 1)
 

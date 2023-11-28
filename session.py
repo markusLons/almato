@@ -124,7 +124,7 @@ class Client:
                 self.process_events(events)
 
             # Пауза перед следующей проверкой базы данных
-            time.sleep(3)
+            time.sleep(0.5)
 if __name__ == "__main__":
     # Пример использования
     host_instance = Host(session_id="your_session_id")

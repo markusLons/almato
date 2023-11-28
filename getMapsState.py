@@ -14,6 +14,85 @@ from PyQt5.QtWidgets import QDialog, QLabel, QTextEdit, QPushButton
 
 from PyQt5.QtWidgets import QDialog, QLabel, QLineEdit, QComboBox, QSpinBox, QPushButton, QVBoxLayout
 
+class AddUserDialog(QDialog):
+    def __init__(self, parent):
+        super().__init__()
+        self.my_parent = parent
+        self.setWindowTitle('Добавить нового поьзователя')
+
+        self.username_label = QLabel('Имя пользователя:')
+        self.username_input = QLineEdit()
+
+        self.password_label = QLabel('Пароль:')
+        self.password_input = QLineEdit()
+
+        self.type_label = QLabel('Тип пользователя (1 - администратор, иначе 0):')
+        self.type_input = QLineEdit()
+
+        self.name_label = QLabel('Фамилия Имя:')
+        self.name_input = QLineEdit()
+
+        self.create_button = QPushButton('Создать')
+        self.create_button.clicked.connect(self.add_user)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.username_label)
+        layout.addWidget(self.username_input)
+        layout.addWidget(self.password_label)
+        layout.addWidget(self.password_input)
+        layout.addWidget(self.type_label)
+        layout.addWidget(self.type_input)
+        layout.addWidget(self.name_label)
+        layout.addWidget(self.name_input)
+        layout.addWidget(self.create_button)
+        self.setLayout(layout)
+
+    def add_user(self):
+        # Получите значения, введенные пользователем
+        new_user_username = self.username_input.text()
+        new_user_password = self.password_input.text()
+        new_user_type = self.type_input.text()
+        new_user_name = self.name_input.text()
+
+        # Выполните SQL-запрос для вставки новой карты в базу данных, как описано в предыдущем ответе
+        # Включите значения начала и конца времени в ваш SQL-запрос
+        self.send_user_on_SQL(user_username=new_user_username,
+                             user_password=new_user_password,
+                             user_type=new_user_type,
+                             user_name=new_user_name)
+        # Закройте диалоговое окно после создания карты
+        self.accept()
+
+    def send_user_on_SQL(self, user_username, user_password, user_type, user_name):
+        with open('configs/db_config.json', 'r') as config_file:
+            config = json.load(config_file)
+
+        connection = mysql.connector.connect(**config)
+        cursor = connection.cursor()
+
+        # Используйте параметризованный запрос, чтобы избежать SQL-инъекций
+        query = """
+        INSERT INTO users 
+        (username, password, type, name) 
+        VALUES 
+        (%s, %s, %s, %s)
+        """
+
+        # Значения для параметризованного запроса
+        values = (user_username, user_password, user_type, user_name)
+
+        try:
+            cursor.execute(query, values)
+            connection.commit()
+            print("Запись успешно добавлена в базу данных")
+        except Exception as e:
+            print(f"Ошибка при добавлении записи в базу данных: {e}")
+        finally:
+            cursor.close()
+            connection.close()
+
+
+
 class CreateMapDialog(QDialog):
     def __init__(self, parent):
         super().__init__()
@@ -186,6 +265,11 @@ class MapsWindow(QWidget):
                 self.create_competition_button = QPushButton('Создать соревнование')
                 self.create_competition_button.clicked.connect(self.create_competition)
                 self.my_map_info_layout.addWidget(self.create_competition_button)
+
+                self.new_user = QPushButton('Добавить нового пользователя')
+                self.new_user.clicked.connect(self.add_user)
+                self.my_map_info_layout.addWidget(self.new_user)
+
             my_maps_layout.addLayout(self.my_map_info_layout)
 
             self.my_maps_tab.setLayout(my_maps_layout)
@@ -241,6 +325,22 @@ class MapsWindow(QWidget):
 
             self.all_maps_tab.setLayout(all_maps_layout)
 
+            # Вкладка "Соревнования" (для пользователя с типом 1)
+            if USER_TYPE == 1:
+                self.all_competitions_tab = QWidget()
+
+                self.tabs.addTab(self.all_competitions_tab, 'Соревнования')
+
+                all_competitions_layout = QHBoxLayout()
+
+                # Список названий всех карт
+                self.competitions_list = QListWidget()
+                self.competitions_list.itemClicked.connect(self.load_competition_data)
+                all_competitions_layout.addWidget(self.competitions_list)
+
+                self.all_competitions_tab.setLayout(all_competitions_layout)
+                self.load_all_competitions_list()
+
         # Дополнительные кнопки для пользователя с типом 1
         if USER_TYPE == 1:
             self.create_map_button = QPushButton('Создать карту')
@@ -249,6 +349,7 @@ class MapsWindow(QWidget):
 
             self.report_button = QPushButton('ЦЗТ')
             self.report_button.clicked.connect(self.open_report_window)
+
             self.map_info_layout.addWidget(self.report_button) # убрать
 
         # Загрузка списков карт
@@ -316,6 +417,27 @@ class MapsWindow(QWidget):
         except mysql.connector.Error as err:
             QMessageBox.critical(self, 'Ошибка', f'Ошибка при подключении к базе данных: {err}')
 
+    def load_all_competitions_list(self):
+        try:
+            with open('configs/db_config.json', 'r') as config_file:
+                config = json.load(config_file)
+
+            connection = mysql.connector.connect(**config)
+            cursor = connection.cursor()
+
+            # Загрузка списка названий всех соревнований
+            query = "SELECT competitions.competition_id, competitions.name, competitions.date FROM competitions"
+            cursor.execute(query)
+            all_competitions = cursor.fetchall()
+
+            for competition_id, competition_name, competition_date in all_competitions:
+                self.competitions_list.addItem(f"{competition_id}: {competition_name} (Дата: {competition_date})")
+
+            cursor.close()
+            connection.close()
+        except mysql.connector.Error as err:
+            QMessageBox.critical(self, 'Ошибка', f'Ошибка при подключении к базе данных: {err}')
+
     def load_my_map_data(self, item):
         map_id = item.text().split(':')[0]
         try:
@@ -365,6 +487,33 @@ class MapsWindow(QWidget):
 
             cursor.close()
             connection.close()
+        except mysql.connector.Error as err:
+            QMessageBox.critical(self, 'Ошибка', f'Ошибка при подключении к базе данных: {err}')
+
+    def load_competition_data(self, item):
+        map_id = item.text().split(':')[0]
+        try:
+            with open('configs/db_config.json', 'r') as config_file:
+                config = json.load(config_file)
+
+            connection = mysql.connector.connect(**config)
+            cursor = connection.cursor()
+
+            # Загрузка данных о выбранной карте
+            query = "SELECT name, map_data, comment, data_create, data_edit FROM maps WHERE map_id = %s"
+            cursor.execute(query, (map_id,))
+            map_data = cursor.fetchone()
+
+            if map_data:
+                self.map_name_display.setText(map_data[0])
+                self.map_data_display.setPlainText(map_data[1].decode('utf-8'))
+                self.comment_display.setPlainText(map_data[2].decode('utf-8'))
+                self.created_display.setText(str(map_data[3]))
+                self.updated_display.setText(str(map_data[4]))
+
+            cursor.close()
+            connection.close()
+
         except mysql.connector.Error as err:
             QMessageBox.critical(self, 'Ошибка', f'Ошибка при подключении к базе данных: {err}')
 
@@ -421,6 +570,15 @@ class MapsWindow(QWidget):
             connection.close()
         except mysql.connector.Error as err:
             QMessageBox.critical(self, 'Ошибка', f'Ошибка при подключении к базе данных: {err}')
+
+    def add_user(self):
+        add_user_dialog = AddUserDialog(self)
+
+        # Откройте диалоговое окно
+        if add_user_dialog.exec_() == QDialog.Accepted:
+            print("1")
+            # Обновите список карт на текущей вкладке
+            #self.load_user_list()
 
     def create_map(self):
         # Создайте экземпляр диалогового окна для создания новой карты
